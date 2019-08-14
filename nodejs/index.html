@@ -1,0 +1,248 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROSbot_webUI</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css"
+        integrity="sha384-DNOHZ68U8hZfKXOrtjWvjxusGo9WQnrNx2sqG0tfsghAvtVlRW3tvkXWZh58N9jp" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Anonymous+Pro:400,700">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Audiowide">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/range_slider.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/swiper.min.css">
+</head>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/jquery.min.js"></script>
+<script src="js/hammer.min.js"></script>
+<script src="js/nav_interface.js"></script>
+<script src="js/konva.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+
+<body class="bg-light">
+
+    <!-- DONE bootstrap mobile menu -->
+    <!-- DONE mapzoom with mouse scroll -->
+    <!-- DONE mapzoom with touch -->
+    <!-- DONE fix adding entries when reloading page at different device -->
+    <!-- DONE wydawanie polecenia dojazdu do punktu -->
+    <!-- DONE tf listener -->
+    <!-- TODO mapzoom with +/- buttons -->
+    <!-- TODO map alignment -->
+    <!-- TODO ustawianie sekwencji punktów -->
+    <!-- TODO jazda między punktami w sekwencji w pętli -->
+    <!-- TODO jazda między punktami w sekwencji w trybie "tam i z powrotem" -->
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light py-0">
+        <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" onclick="addTargetDialog()">Add target</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="saveCurrentPosition()">Save current position</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showUploadCustomMapDialog()">Upload custom map</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showRouteManagerDialog()">Set route</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="">Stop route</a>
+                </li>
+                <li class="nav-item">
+                    <div class="nav-link">Route status</div>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Views
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <div class="dropdown-item">
+                            <input type="checkbox" class="form-check-input" id="targetLabelsCheckbox">
+                            <label class="form-check-label" for="targetLabelsCheckbox">Target labels</label>
+                        </div>
+                        <div class="dropdown-item">
+                            <input type="checkbox" class="form-check-input" id="targetsTableCheckbox">
+                            <label class="form-check-label" for="targetsTableCheckbox">Targets table</label>
+                        </div>
+                        <div class="dropdown-item">
+                            <input type="checkbox" class="form-check-input" id="zoomCheckbox">
+                            <label class="form-check-label" for="zoomCheckbox">Zoom slider</label>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div id="routeManagerDialog" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Route manager</h4>
+                </div>
+                <div class="modal-body">
+                    <h5 class="text-center">Planned route</h5>
+                    <table class="table table-sm" id="route_table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Position [x, y, theta]</th>
+                                <th scope="col">Label</th>
+                                <th scope="col">Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+
+                    <div>Sequence mode:</div>
+                    <label class="mx-2 my-0"><input type="radio" name="mode">Single run</label>
+                    <label class="mx-2 my-0"><input type="radio" name="mode">Loop run</label>
+                    <label class="mx-2 my-0"><input type="radio" name="mode">Back and forth</label>
+
+                    <h5 class="text-center mt-4">Defined poses</h5>
+                    <table class="table table-sm" id="existing_poses">
+                        <thead>
+                            <tr>
+                                <th scope="col">Position [x, y, theta]</th>
+                                <th scope="col">Label</th>
+                                <th scope="col">Add to route</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal"
+                        onclick="dismissRouteManagerDialog()">Cancel</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal" onclick="startRoute()">Start
+                        route</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="saveCurrentPosDialog" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Add target</h4>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-light">
+                        <tbody>
+                            <tr>
+                                <th scope="col">X [m]</th>
+                                <td id="currentPosX"></td>
+                            </tr>
+                            <tr>
+                                <th scope="col">Y [m]</th>
+                                <td id="currentPosY"></td>
+                            </tr>
+                            <tr>
+                                <th scope="col">Theta [°]</th>
+                                <td id="currentPosTheta"></td>
+                            </tr>
+                            <tr>
+                                <th scope="col">Label</th>
+                                <td>
+                                    <div class="form-group">
+                                        <input type="text" class="form-control" id="currentPosLabel"
+                                            placeholder="Target label">
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal"
+                        onclick="dismissCurrentPosDialog()">Cancel</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal"
+                        onclick="saveCurrentPosConfirm()">Save target</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="uploadCustomMapDialog" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Map upload</h4>
+                </div>
+                <div class="modal-body">
+                    <p>You can upload custom map for robot. Selected map must follow below rules:
+                        <ul>
+                            <li>Map is a grayscale image.</li>
+                            <li>White pixels determine free area.</li>
+                            <li>Black pixels determine obstacles.</li>
+                            <li>Gray pixels determine unknown area.</li>
+                        </ul>
+                    </p>
+                    <form method="post" action="/upload" enctype="multipart/form-data" id="map-upload-form"
+                        class="form-group">
+                        <div class="form-group">
+                            <label for="mapResolution">Resolution [meter/pixel]</label>
+                            <input type="number" step="0.01" min="0" name="mapResolution" id="mapResolution"
+                                placeholder="resolution" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="map-image">Map file</label>
+                            <input type="file" class="form-control-file" name="map-image" id="map-image">
+                        </div>
+                    </form>
+                    <progress class="progress-bar bg-success" id="mapUploadProgress"></progress>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal"
+                        onclick="dismissUploadCustomMapDialog()">Cancel</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal"
+                        onclick="uploadCustomMapConfirm()">Upload map</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="zoom-container">
+        <input class="form-control-range" type="range" id="map-zoom" min="5" max="100" value="100">
+    </div>
+
+    <div id="konva-container">
+    </div>
+
+    <div class="tableFixHead bg-dark" id="table-container">
+        <table class="table-sm table-dark" id="targets">
+            <thead>
+                <tr>
+                    <th scope="col">X [m]</th>
+                    <th scope="col">Y [m]</th>
+                    <th scope="col">Theta [°]</th>
+                    <th scope="col">Label</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="labels-container"></div>
+
+</body>
+
+</html>

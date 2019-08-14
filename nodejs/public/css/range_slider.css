@@ -1,0 +1,97 @@
+input[type=range] {
+  -webkit-appearance:none;
+  width:100%;
+  margin:0px 0;
+}
+
+input[type=range]:focus {
+  outline:none;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  width:100%;
+  height:10px;
+  cursor:pointer;
+  box-shadow:0px 0px 0px #000000, 0px 0px 0px #0d0d0d;
+  background:rgba(0, 0, 0, 0.1);
+  border-radius:0px;
+  border:0px solid rgba(1, 1, 1, 0);
+}
+
+input[type=range]::-webkit-slider-thumb {
+  box-shadow:0px 0px 0px rgba(0, 0, 0, 0), 0px 0px 0px rgba(13, 13, 13, 0);
+  border:0px solid rgba(0, 0, 0, 0);
+  height:10px;
+  width:30px;
+  border-radius:0px;
+  background:#c8102e;
+  cursor:pointer;
+  -webkit-appearance:none;
+  margin-top:0px;
+}
+
+input[type=range]:focus::-webkit-slider-runnable-track {
+  background:rgba(5, 5, 5, 0.1);
+}
+
+input[type=range]::-moz-range-track {
+  width:100%;
+  height:10px;
+  cursor:pointer;
+  box-shadow:0px 0px 0px #000000, 0px 0px 0px #0d0d0d;
+  background:rgba(0, 0, 0, 0.1);
+  border-radius:0px;
+  border:0px solid rgba(1, 1, 1, 0);
+}
+
+input[type=range]::-moz-range-thumb {
+  box-shadow:0px 0px 0px rgba(0, 0, 0, 0), 0px 0px 0px rgba(13, 13, 13, 0);
+  border:0px solid rgba(0, 0, 0, 0);
+  height:10px;
+  width:30px;
+  border-radius:0px;
+  background:#c8102e;
+  cursor:pointer;
+}
+
+input[type=range]::-ms-track {
+  width:100%;
+  height:10px;
+  cursor:pointer;
+  background:transparent;
+  border-color:transparent;
+  color:transparent;
+}
+
+input[type=range]::-ms-fill-lower {
+  background:rgba(0, 0, 0, 0.1);
+  border:0px solid rgba(1, 1, 1, 0);
+  border-radius:0px;
+  box-shadow:0px 0px 0px #000000, 0px 0px 0px #0d0d0d;
+}
+
+input[type=range]::-ms-fill-upper {
+  background:rgba(0, 0, 0, 0.1);
+  border:0px solid rgba(1, 1, 1, 0);
+  border-radius:0px;
+  box-shadow:0px 0px 0px #000000, 0px 0px 0px #0d0d0d;
+}
+
+input[type=range]::-ms-thumb {
+  box-shadow:0px 0px 0px rgba(0, 0, 0, 0), 0px 0px 0px rgba(13, 13, 13, 0);
+  border:0px solid rgba(0, 0, 0, 0);
+  width:30px;
+  border-radius:0px;
+  background:#c8102e;
+  cursor:pointer;
+  height:10px;
+}
+
+input[type=range]:focus::-ms-fill-lower {
+  background:rgba(0, 0, 0, 0.1);
+}
+
+input[type=range]:focus::-ms-fill-upper {
+  background:rgba(5, 5, 5, 0.1);
+}
+
