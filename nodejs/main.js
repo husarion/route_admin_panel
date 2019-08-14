@@ -258,6 +258,10 @@ io.on('connection', function (socket) {
     });
 
     targets.targets.forEach(emit_target);
+    for (let i = 0; i < routePlanner.goalList.length; i++) {
+        emit_route_point(i, routePlanner.goalList[i].getNavID(), routePlanner.goalList[i].getRouteID());
+    }
+
     emit_map_update();
 });
 
