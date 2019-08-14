@@ -47,19 +47,24 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item">
-                    <a class="nav-link" onclick="addTargetDialog()">Add target</a>
+                    <a class="nav-link" onclick="addTargetDialog()" data-toggle="collapse"
+                        data-target="#navbarSupportedContent">Add target</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" onclick="saveCurrentPosition()">Save current position</a>
+                    <a class="nav-link" onclick="saveCurrentPosition()" data-toggle="collapse"
+                        data-target="#navbarSupportedContent">Save current position</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" onclick="showUploadCustomMapDialog()">Upload custom map</a>
+                    <a class="nav-link" onclick="showUploadCustomMapDialog()" data-toggle="collapse"
+                        data-target="#navbarSupportedContent">Upload custom map</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" onclick="showRouteManagerDialog()">Set route</a>
+                    <a class="nav-link" onclick="showRouteManagerDialog()" data-toggle="collapse"
+                        data-target="#navbarSupportedContent">Set route</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" onclick="">Stop route</a>
+                    <a class="nav-link" onclick="stopRoute()" data-toggle="collapse"
+                        data-target="#navbarSupportedContent">Stop route</a>
                 </li>
                 <li class="nav-item">
                     <div class="nav-link">Route status</div>
@@ -72,15 +77,18 @@
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                         <div class="dropdown-item">
                             <input type="checkbox" class="form-check-input" id="targetLabelsCheckbox">
-                            <label class="form-check-label" for="targetLabelsCheckbox">Target labels</label>
+                            <label class="form-check-label" for="targetLabelsCheckbox" data-toggle="collapse"
+                                data-target="#navbarSupportedContent">Target labels</label>
                         </div>
                         <div class="dropdown-item">
                             <input type="checkbox" class="form-check-input" id="targetsTableCheckbox">
-                            <label class="form-check-label" for="targetsTableCheckbox">Targets table</label>
+                            <label class="form-check-label" for="targetsTableCheckbox" data-toggle="collapse"
+                                data-target="#navbarSupportedContent">Targets table</label>
                         </div>
                         <div class="dropdown-item">
                             <input type="checkbox" class="form-check-input" id="zoomCheckbox">
-                            <label class="form-check-label" for="zoomCheckbox">Zoom slider</label>
+                            <label class="form-check-label" for="zoomCheckbox" data-toggle="collapse"
+                                data-target="#navbarSupportedContent">Zoom slider</label>
                         </div>
                     </div>
                 </li>
