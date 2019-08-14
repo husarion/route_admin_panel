@@ -1,0 +1,6 @@
+.vscode
+node_modules
+user_images
+user_maps
+module_sources
+rosnodejs*.tgz

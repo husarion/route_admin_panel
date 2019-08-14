@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>route_admin_panel</name>
+  <version>0.0.1</version>
+  <description>The route_admin_panel package allows user to send goals to move_base by using web browser.</description>
+  <maintainer email="lukasz.mitka@husarion.com">Łukasz Mitka</maintainer>
+  <license>LGPLv3</license>
+
+  <author email="lukasz.mitka@husarion.com">Łukasz Mitka</author>
+  <buildtool_depend>catkin</buildtool_depend>
+
+</package>
