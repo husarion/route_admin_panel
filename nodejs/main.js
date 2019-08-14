@@ -80,36 +80,6 @@ function load_config() {
                 startMapServer(custom_map_file);
             }
         }
-
-        // Temporary route planner test
-        // targets.targets.forEach(t => {
-        //     routePlanner.addGoal(t.id);
-        // })
-        // routePlanner.removeGoal(targets.targets[0].id);
-        // routePlanner.setSequenceMode(RoutePlanner.SequenceModes.BACK_AND_FORTH);
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
-        // routePlanner.goalAccepted(routePlanner.getNextGoal());
-        // console.log("RoutePlanner:\n", routePlanner);
     });
 }
 
@@ -267,26 +237,22 @@ io.on('connection', function (socket) {
 
     socket.on('add_to_route', function (navID) {
         let pointSummary = routePlanner.addGoal(navID);
-        console.log("RoutePlanner:\n", routePlanner);
         emit_route_point(pointSummary.sequence, pointSummary.navID, pointSummary.routeID);
     });
 
     socket.on('remove_from_route', function (routeID) {
         routePlanner.removeGoal(routeID);
-        console.log("RoutePlanner:\n", routePlanner);
         emit_del_route_point(routeID);
     });
 
     socket.on('move_up_on_route', function (routeID) {
         let pointSummary = routePlanner.moveGoalUp(routeID);
-        console.log("RoutePlanner:\n", routePlanner);
         emit_del_route_point(routeID);
         emit_route_point(pointSummary.sequence, pointSummary.navID, pointSummary.routeID);
     });
 
     socket.on('move_down_on_route', function (routeID) {
         let pointSummary = routePlanner.moveGoalDown(routeID);
-        console.log("RoutePlanner:\n", routePlanner);
         emit_del_route_point(routeID);
         emit_route_point(pointSummary.sequence, pointSummary.navID, pointSummary.routeID);
     });
