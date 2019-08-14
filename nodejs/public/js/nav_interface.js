@@ -1,6 +1,7 @@
 var socket;
 var targets_table;
 var targets_array = [];
+var route_array = [];
 
 function addTableRow(table, target_params) {
     //  Check if entry already exists
@@ -127,11 +128,6 @@ function showUploadCustomMapDialog() {
 }
 
 function showRouteManagerDialog() {
-    let route_table = document.getElementById('route_table').getElementsByTagName('tbody')[0];
-    for (var i = route_table.rows.length - 1; i >= 0; i--) {
-        route_table.deleteRow(i);
-    }
-
     let existing_poses_table = document.getElementById('existing_poses').getElementsByTagName('tbody')[0];
     for (var i = existing_poses_table.rows.length - 1; i >= 0; i--) {
         existing_poses_table.deleteRow(i);
@@ -524,6 +520,11 @@ window.onload = function () {
     });
 
     socket.on('add_target', function (target) {
+        for (let i = 0; i < targets_array.length; i++) {
+            if (targets_array[i].id == target.id) {
+                return;
+            }
+        }
         targets_array.push({
             id: target.id,
             x: parseFloat(target.x),
@@ -531,6 +532,14 @@ window.onload = function () {
             theta: parseFloat(target.theta),
             label: target.label
         });
+        let existing_poses_table = document.getElementById('existing_poses').getElementsByTagName('tbody')[0];
+        let row = existing_poses_table.insertRow(existing_poses_table.rows.length);
+        row.id = 'poseRow#' + target.id;
+        row.insertCell(-1).innerHTML = "[" + target.x.toFixed(2) + ", " + target.y.toFixed(2) + ", " + (target.theta * 180 / Math.PI).toFixed(2) + "]";
+        row.insertCell(-1).innerHTML = target.label;
+        let buttonsCell = row.insertCell(-1);
+        buttonsCell.appendChild(createAddToRouteButtonElement(target.id));
+        buttonsCell.classList.add("text-center");
         addTableRow(targets_table, target);
         updateTargets();
     });
@@ -569,12 +578,23 @@ window.onload = function () {
     });
 
     socket.on('new_route_point', function (route_point) {
+        for (let i = 0; i < route_array.length; i++) {
+            if (route_array[i].point_routeID == route_point.point_routeID) {
+                return;
+            }
+        }
         console.log("Add new route point to table, sequence: " + route_point.route_sequence + ", ID: " + route_point.point_navID);
+        route_array.push(route_point);
         addRouteTableRow(route_point.target, route_point.route_sequence, route_point.point_routeID);
     });
 
     socket.on('del_route_point', function (routeID) {
         console.log("Remove route point from table: " + routeID);
+        for (var i = 0; i < route_array.length; i++) {
+            if (route_array[i].point_routeID === routeID) {
+                route_array.splice(i, 1);
+            }
+        }
         removeRouteTableRow(routeID);
     });
 
