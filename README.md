@@ -13,11 +13,16 @@ Web server for ROS <==> Browser communication is based on [Node.js](https://node
 
 ## Installation
 
-Install [Node.js](https://nodejs.org/en/download/) in LTS version.
+Install [Node.js](https://nodejs.org/):
+
+```
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+sudo apt install -y nodejs
+```
 
 Clone and build Husarion fork of `rosnodejs` repository:
 ```
-mkdir husarion_rosnodejs
+mkdir ~/husarion_rosnodejs
 cd ~/husarion_rosnodejs
 git clone https://github.com/lukaszmitka/rosnodejs.git
 cd ~/husarion_rosnodejs/rosnodejs
@@ -25,12 +30,22 @@ npm install
 npm pack
 ```
 
-Clone required repositories:
+Create workspace and clone dependency repositories, it may happen that you already have it done, in that case, skip this step:
+```
+mkdir ~/ros_workspace
+mkdir ~/ros_workspace/src
+cd ~/ros_workspace/src
+catkin_init_workspace 
+echo '. ~/ros_workspace/devel/setup.sh' >> ~/.bashrc
+
+git clone https://github.com/husarion/husarion_ros.git
+git clone https://github.com/husarion/rosbot_description.git
+```
+
+Clone `route_admin_panel` repository:
 ```
 cd ~/ros_workspace/src
 git clone https://github.com/husarion/route_admin_panel.git
-git clone https://github.com/husarion/husarion_ros.git
-gti clone https://github.com/husarion/rosbot_description.git
 ```
 
 Install rosnodejs and dependencies:
@@ -43,6 +58,14 @@ npm install
 mkdir user_maps
 echo '{"targetList": {"targets": []}}' > user_maps/config.json
 ```
+
+Build workspace:
+```
+cd ~/ros_workspace
+catkin_make
+. ~/ros_workspace/devel/setup.sh
+```
+
 ## How to use
 
 Start using launch file, depending on your ROSbot version:
