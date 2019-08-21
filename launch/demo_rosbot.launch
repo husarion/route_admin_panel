@@ -1,5 +1,7 @@
 <launch>
 
+    <node pkg="tf" type="static_transform_publisher" name="ROSbot_laser" args="0 0 0 3.14 0 0 base_link laser 100" />
+
     <node pkg="route_admin_panel" type="serial_bridge.sh" name="bridge" output="screen"/>
 
     <node pkg="route_admin_panel" type="node_server.sh" name="node_server" output="screen"/>
