@@ -447,8 +447,7 @@ function redraw_map(scale, robot_x_pos, robot_y_pos) {
         map_image_element.setAttrs({
             x:
                 (stage.width() / 2)
-                - scale * map_metadata.width
-                - scale * map_metadata.origin.position.y / map_metadata.resolution
+                + scale * map_metadata.origin.position.x / map_metadata.resolution
                 - scale * robot_x_pos / map_metadata.resolution,
             y:
                 (stage.height() / 2)
