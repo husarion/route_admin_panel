@@ -25,9 +25,8 @@ Clone and build Husarion fork of `rosnodejs` repository:
 ```bash
 mkdir ~/husarion_rosnodejs
 cd ~/husarion_rosnodejs
-git clone https://github.com/lukaszmitka/rosnodejs.git
+git clone https://github.com/RethinkRobotics-opensource/rosnodejs.git
 cd ~/husarion_rosnodejs/rosnodejs
-git checkout action_server
 npm install
 npm pack
 ```
