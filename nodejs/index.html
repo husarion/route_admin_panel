@@ -56,7 +56,7 @@
                         data-target="#navbarSupportedContent">Stop route</a>
                 </li>
                 <li class="nav-item">
-                    <div class="nav-link">Route status</div>
+                    <div class="nav-link" id="route-status"></div>
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
@@ -106,9 +106,13 @@
                     </table>
 
                     <div>Sequence mode:</div>
-                    <label class="mx-2 my-0"><input type="radio" name="mode">Single run</label>
-                    <label class="mx-2 my-0"><input type="radio" name="mode" checked>Loop run</label>
-                    <label class="mx-2 my-0"><input type="radio" name="mode">Back and forth</label>
+                    <label class="mx-2 my-0"><input type="radio" name="mode" value="run_sequence_once">Single
+                        run</label>
+                    <label class="mx-2 my-0"><input type="radio" name="mode" value="run_sequence_in_loop" checked>Loop
+                        run</label>
+                    <label class="mx-2 my-0"><input type="radio" name="mode" value="run_sequence_back_and_forth">Back
+                        and
+                        forth</label>
 
                     <h5 class="text-center mt-4">Defined poses</h5>
                     <table class="table table-sm" id="existing_poses">

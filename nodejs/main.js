@@ -54,7 +54,7 @@ var robot_pose_emit_timestamp;
 var moveBase_actionClient
 
 var routePlanner = new RoutePlanner.RoutePlanner();
-
+var route_active = false;
 function save_config() {
     let confObject = {
         customMapFile: custom_map_file,
@@ -186,6 +186,34 @@ function emit_del_route_point(routeID) {
     io.emit('del_route_point', routeID);
 }
 
+function emit_route_status_update(label, sequence, seq_max) {
+    let status = {
+        seq: sequence,
+        max: seq_max,
+        label: label
+    }
+    io.emit('route_status', status);
+}
+
+function drive_to_target(navID) {
+    let target = targets.get_target_by_id(navID);
+    let move_base_goal = new move_base_msgs.MoveBaseGoal();
+    let set_point = new geometry_msgs.PoseStamped();
+    let target_quaternion = math3d.Quaternion.Euler(0, 0, target.theta * 180 / Math.PI);
+    set_point.header.frame_id = "map";
+    set_point.header.stamp.secs = Date.now() / 1000;
+    set_point.pose.position.x = target.x;
+    set_point.pose.position.y = target.y;
+    set_point.pose.orientation.x = target_quaternion.x;
+    set_point.pose.orientation.y = target_quaternion.y;
+    set_point.pose.orientation.z = target_quaternion.z;
+    set_point.pose.orientation.w = target_quaternion.w;
+    move_base_goal.target_pose = set_point;
+    let goal_handle = moveBase_actionClient.sendGoal(move_base_goal);
+    console.log(goal_handle._goal.goal_id);
+    return goal_handle._goal.goal_id;
+}
+
 io.on('connection', function (socket) {
     console.log('a user connected');
     socket.on('disconnect', function () {
@@ -218,21 +246,7 @@ io.on('connection', function (socket) {
     });
 
     socket.on('drive_to_target', function (targetID) {
-        let target = targets.get_target_by_id(targetID);
-        let move_base_goal = new move_base_msgs.MoveBaseGoal();
-        let set_point = new geometry_msgs.PoseStamped();
-        let target_quaternion = math3d.Quaternion.Euler(0, 0, target.theta * 180 / Math.PI);
-        set_point.header.frame_id = "map";
-        set_point.header.stamp.secs = Date.now() / 1000;
-        set_point.pose.position.x = target.x;
-        set_point.pose.position.y = target.y;
-        set_point.pose.orientation.x = target_quaternion.x;
-        set_point.pose.orientation.y = target_quaternion.y;
-        set_point.pose.orientation.z = target_quaternion.z;
-        set_point.pose.orientation.w = target_quaternion.w;
-        move_base_goal.target_pose = set_point;
-        let goal_handle = moveBase_actionClient.sendGoal(move_base_goal);
-        console.log(goal_handle._goal.goal_id);
+        drive_to_target(targetID);
     });
 
     socket.on('add_to_route', function (navID) {
@@ -255,6 +269,31 @@ io.on('connection', function (socket) {
         let pointSummary = routePlanner.moveGoalDown(routeID);
         emit_del_route_point(routeID);
         emit_route_point(pointSummary.sequence, pointSummary.navID, pointSummary.routeID);
+    });
+
+    socket.on('route_start', function (mode) {
+        console.log("Start route in " + mode + " mode");
+        routePlanner.sequenceMode = mode;
+        route_active = true;
+        let goalNavID = routePlanner.getNextGoal();
+        let actionGoalID = drive_to_target(goalNavID);
+        let routeID;
+        let sequence;
+        let goalLabel;
+        for (let i = 0; i < routePlanner.goalList.length; i++) {
+            if (routePlanner.goalList[i].getNavID() == goalNavID) {
+                routeID = routePlanner.goalList[i].getRouteID();
+                sequence = i;
+                goalLabel = targets.get_target_by_id(goalNavID).label;
+            }
+        }
+        routePlanner.goalAccepted(routeID, actionGoalID);
+        emit_route_status_update(goalLabel, sequence, routePlanner.goalList.length - 1);
+    });
+
+    socket.on('route_stop', function () {
+        console.log("Stop route");
+        route_active = false;
     });
 
     targets.targets.forEach(emit_target);
@@ -326,14 +365,46 @@ rosnodejs.initNode('/rosnodejs')
             actionServer: '/move_base'
         });
         console.log("Subscribe to move_base updates");
-        moveBase_actionClient.on('status', (data) => {
-            // console.log("Received move_base: status");
-            data.status_list.forEach(status => {
-                // console.log("    Goal ID: " + status.goal_id.id + ", status: " + status.status);
-            });
+
+        moveBase_actionClient.on('result', (data) => {
+            console.log("Received move_base: result\n", data);
+            if (data.status.status == 3) {
+                if (route_active) {
+                    switch (routePlanner.sequenceMode) {
+                        case RoutePlanner.SequenceModes.LOOP_RUN:
+                            break;
+                        case RoutePlanner.SequenceModes.SINGLE_RUN:
+                            break;
+                        case RoutePlanner.SequenceModes.BACK_AND_FORTH:
+                            break;
+                    }
+                    let goalNavID = routePlanner.getNextGoal();
+                    if (!goalNavID) {
+                        console.log("End of route");
+                        route_active = false;
+                    } else {
+                        let actionGoalID = drive_to_target(goalNavID);
+                        let routeID;
+                        let sequence;
+                        let goalLabel;
+                        for (let i = 0; i < routePlanner.goalList.length; i++) {
+                            if (routePlanner.goalList[i].getNavID() == goalNavID) {
+                                routeID = routePlanner.goalList[i].getRouteID();
+                                sequence = i;
+                                goalLabel = targets.get_target_by_id(goalNavID).label;
+                            }
+                        }
+                        routePlanner.goalAccepted(routeID, actionGoalID);
+                        emit_route_status_update(goalLabel, sequence, routePlanner.goalList.length - 1);
+                    }
+
+                } else {
+                    emit_route_status_update("Finished", 0, 0);
+                }
+            } else {
+                emit_route_status_update("CANCELLED", 0, 0);
+            }
         });
-        // moveBase_actionClient.on('feedback', (data) => {console.log("Received move_base: feedback\n", data);});
-        // moveBase_actionClient.on('result', (data) => {console.log("Received move_base: result\n", data);});
     })
     .catch((err) => {
         rosnodejs.log.error(err.stack);

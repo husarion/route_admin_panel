@@ -37,6 +37,7 @@ var saveCurrentPosDialog;
 var uploadCustomMapDialog;
 var uploadMapProgressBar;
 var routeManagerDialog;
+var routeStatusLabel;
 
 function setTargetLabelsCheckboxListener() {
     let checkbox = document.getElementById('targetLabelsCheckbox');
@@ -298,6 +299,16 @@ function driveToTarget(target_id) {
     socket.emit('drive_to_target', target_id);
 }
 
+function startRoute() {
+    let mode = document.querySelector('input[name="mode"]:checked').value;
+    socket.emit('route_start', mode);
+    dismissRouteManagerDialog();
+}
+
+function stopRoute() {
+    socket.emit('route_stop');
+}
+
 function addToRoute(target_id) {
     console.log("Add " + target_id + " to route");
     socket.emit('add_to_route', target_id);
@@ -509,6 +520,7 @@ window.onload = function () {
     map_scale = parseInt(mapZoomSlider.value, 10) / 100;
 
     targets_table = document.getElementById('targets').getElementsByTagName('tbody')[0];
+    routeStatusLabel = document.getElementById('route-status');
 
     socket.on('robot_pose', function (robot_coordinates) {
         robot_position.x = robot_coordinates.x_pos;
@@ -595,6 +607,11 @@ window.onload = function () {
             }
         }
         removeRouteTableRow(routeID);
+    });
+
+    socket.on('route_status', function (status) {
+        console.log('route_status\n', status)
+        routeStatusLabel.innerHTML = "Dest " + status.label + " [" + status.seq + "/" + status.max + "]";
     });
 
     saveCurrentPosDialog = document.getElementById("saveCurrentPosDialog");
