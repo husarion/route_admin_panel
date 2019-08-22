@@ -27,6 +27,7 @@ mkdir ~/husarion_rosnodejs
 cd ~/husarion_rosnodejs
 git clone https://github.com/lukaszmitka/rosnodejs.git
 cd ~/husarion_rosnodejs/rosnodejs
+git checkout action_server
 npm install
 npm pack
 ```
