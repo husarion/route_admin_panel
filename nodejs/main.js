@@ -315,14 +315,6 @@ rosnodejs.initNode('/rosnodejs')
         robot_pose_emit_timestamp = Date.now();
         zoom_publisher = rosNode.advertise('/map_zoom', std_msgs.Int16, default_publisher_options);
 
-        drive_msg.linear.x = 0;
-        drive_msg.linear.y = 0;
-        drive_msg.linear.z = 0;
-        drive_msg.angular.x = 0;
-        drive_msg.angular.y = 0;
-        drive_msg.angular.z = 0;
-        cmd_vel_publisher = rosNode.advertise('/cmd_vel', geometry_msgs.Twist, default_publisher_options);
-
         let pose_subscriber = rosNode.subscribe('/tf', 'tf2_msgs/TFMessage',
             (data) => {
                 data.transforms.forEach(transform_stamped => {
