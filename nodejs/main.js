@@ -140,7 +140,7 @@ function startMapServer(map_file) {
 }
 
 app.get('/', function (req, res) {
-    res.sendFile(__dirname + '/index.html');
+    res.sendFile(__dirname + '/public/index.html');
 });
 
 app.use(express.static('public'))
@@ -306,8 +306,8 @@ io.on('connection', function (socket) {
 
 load_config();
 
-http.listen(3000, function () {
-    console.log('listening on *:3000');
+http.listen(8000, function () {
+    console.log('listening on *:8000');
 });
 
 rosnodejs.initNode('/rosnodejs')
