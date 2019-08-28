@@ -96,7 +96,7 @@ Depending on your ROSbot version, you can start it with:
 Once all nodes are running, go to web browser and type in address bar:
 
 ```bash
-ROSBOT_IP_ADDRESS:3000
+ROSBOT_IP_ADDRESS:8000
 ```
 You need to substitute phrase `ROSBOT_IP_ADDRESS` with IP address of your device.
 
@@ -104,3 +104,62 @@ You should see interface like below:
 
 ![RouteAdminPanelScreenshot](images/route-admin-panel.png)
 
+## Using panel from any network
+
+In case you would like to manage robot destinations outside of local network, you could use [Husarnet](https://husarnet.com/) for secure connection with your robot.
+
+All Husarion devices comes with Husarnet preisntalled, if you are using your own device, install Husarnet according to [installation guide](https://docs.husarnet.com/install/).
+
+If you do not have a Husarnet account, create it and log in to [Husarnet dashboard](https://app.husarnet.com/).
+
+In Husarnet dashboard, click **Create network** button, you will get a dialog:
+
+![create network](images/husarnet_01_create-network.png)
+
+Type `route_admin_demo` as network name then click **Create** button.
+
+Go to your device and register it in Husarnet network by executing in terminal:
+
+```
+sudo husarnet websetup
+```
+
+You will get a registration link as a response, open it in web browser:
+
+![add device](images/husarnet_02_husarnet.png)
+
+- In **Name for this device** provide `my-rosbot`
+- In **Add to network** dropdown menu choose `route_admin_demo`
+- Check **Change device hostname** checkbox
+- Click **Add device to your account** button
+
+You will be redirected to network summary view:
+
+![network summary](images/husarnet_03_network.png)
+
+Click device name to open its configuration:
+
+![network member](images/husarnet_04_network_member.png)
+
+Check **ROS master** checkbox.
+
+Optionally you can also check **Make the Web UI public** if you want to make panel accessible for anyone knowing device address.
+
+Go back to your device and start panel with the same launch file as for local network.
+
+Once the panel is running, you will notice new button **WebUI** next to your device address in Husarnet dashboard, use this button to view panel.
+
+![web ui accessible](images/husarnet_05_network.png)
+
+***Wait! But what about real peer-to-peer connection?***
+
+To get access without need to log into any server, you will have to install Husarnet client also on your laptop, procedure is the same as for any other device.
+
+Then register your laptop in Husarnet network the same way as you did with robot.
+
+On laptop open browser and in address bar type: `[ROSBOT_HUSARNET_ADDRESS]:8000`
+`ROSBOT_HUSARNET_ADDRESS` ia a value that you can find in Husarnet dashboard in device settings.
+
+In the end you will be able to access `route_admin_panel` from any network using a secure peer-to-peer connection:
+
+![panel accessed through husarnet](images/panel_at_husarnet.png)
