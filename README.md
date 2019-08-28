@@ -20,7 +20,7 @@ curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
-Clone and build Husarion fork of `rosnodejs` repository:
+Clone and build `rosnodejs`:
 
 ```bash
 mkdir ~/husarion_rosnodejs
