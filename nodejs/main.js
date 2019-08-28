@@ -358,7 +358,7 @@ rosnodejs.initNode('/rosnodejs')
         });
         console.log("Subscribe to move_base updates");
 
-        moveBase_actionClient.on('result', (data) => {
+        moveBase_actionClient._acInterface.on('result', (data) => {
             console.log("Received move_base: result\n", data);
             if (data.status.status == 3) {
                 if (route_active) {
