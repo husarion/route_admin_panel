@@ -1,0 +1,15 @@
+<launch>
+
+    <node pkg="route_admin_panel" type="node_server.sh" name="node_server" output="screen"/>
+
+    <node pkg="husarion_ros" type="map_to_img_node" name="map_to_img" output="screen">
+        <param name="tile_width" value="640"/>
+        <param name="tile_height" value="480"/>
+        <param name="parent_frame" value="/map"/>
+        <param name="child_frame" value="/base_link"/>
+        <param name="draw_robot" value="false"/>
+        <param name="publish_full_map" value="true"/>
+        <param name="publish_map_tile" value="false"/>
+    </node>
+
+</launch>    
