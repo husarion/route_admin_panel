@@ -93,6 +93,18 @@ Depending on your ROSbot version, you can start it with:
     roslaunch route_admin_panel demo_gazebo.launch
     ```
 
+- for ROSbot 2.0 with [Mbed firmware](https://github.com/husarion/rosbot-firmware-new):
+
+    ```bash
+    roslaunch route_admin_panel demo_rosbot_mbed_fw.launch
+    ```
+
+- for ROSbot 2.0 PRO with [Mbed firmware](https://github.com/husarion/rosbot-firmware-new):
+
+    ```bash
+    roslaunch route_admin_panel demo_rosbot_pro_mbed_fw.launch
+    ```
+
 Once all nodes are running, go to web browser and type in address bar:
 
 ```bash
