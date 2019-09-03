@@ -36,8 +36,13 @@ var map_scale;
 var saveCurrentPosDialog;
 var uploadCustomMapDialog;
 var uploadMapProgressBar;
+var pathCreatorDialog
 var routeManagerDialog;
 var routeStatusLabel;
+var loading_dropdown;
+var unloading_dropdown;
+var currentPath;
+var currentPosesArray;
 
 function setTargetLabelsCheckboxListener() {
     let checkbox = document.getElementById('targetLabelsCheckbox');
@@ -146,6 +151,28 @@ function showRouteManagerDialog() {
     routeManagerDialog.style.display = "block";
 }
 
+function showPathCreatorDialog() {
+    while (loading_dropdown.firstChild) {
+        loading_dropdown.removeChild(loading_dropdown.firstChild);
+    }
+
+    while (unloading_dropdown.firstChild) {
+        unloading_dropdown.removeChild(unloading_dropdown.firstChild);
+    }
+
+    targets_array.forEach(target => {
+        var opt_l = document.createElement('option');
+        var opt_u = document.createElement('option');
+        opt_l.appendChild(document.createTextNode(target.label));
+        opt_u.appendChild(document.createTextNode(target.label));
+        opt_l.value = target.id;
+        opt_u.value = target.id;
+        loading_dropdown.appendChild(opt_l);
+        unloading_dropdown.appendChild(opt_u);
+    });
+    pathCreatorDialog.style.display = "block";
+}
+
 function dismissRouteManagerDialog() {
     routeManagerDialog.style.display = "none";
 }
@@ -153,6 +180,19 @@ function dismissRouteManagerDialog() {
 function dismissUploadCustomMapDialog() {
     uploadCustomMapDialog.style.display = "none";
     uploadMapProgressBar.style.display = "none";
+}
+
+function dismissPathCreatorDialog() {
+    pathCreatorDialog.style.display = "none";
+}
+
+function createPath() {
+    let plan_request = {
+        start: loading_dropdown.value,
+        end: unloading_dropdown.value
+    };
+    socket.emit('make_plan', plan_request);
+    dismissPathCreatorDialog();
 }
 
 function uploadCustomMapConfirm() {
@@ -216,6 +256,8 @@ window.onclick = function (event) {
         dismissUploadCustomMapDialog();
     } else if (event.target == routeManagerDialog) {
         dismissRouteManagerDialog();
+    } else if (event.target == pathCreatorDialog) {
+        dismissPathCreatorDialog();
     }
 }
 
@@ -293,6 +335,30 @@ function updateTargets() {
     targets_array.forEach(updateTarget);
     arrowsLayer.batchDraw();
 }
+
+function redrawPath(posesArray) {
+    if (posesArray) {
+        currentPosesArray = posesArray;
+    }
+    if (currentPosesArray.length != 0) {
+        let line_points = [];
+        for (var i = 0; i < currentPosesArray.length; i++) {
+            let target_x_screen = (stage.width() / 2) - map_scale * robot_position.x / map_metadata.resolution + map_scale * currentPosesArray[i].pose.position.x / map_metadata.resolution;
+            let target_y_screen = (stage.height() / 2) + map_scale * robot_position.y / map_metadata.resolution - map_scale * currentPosesArray[i].pose.position.y / map_metadata.resolution;
+            line_points.push(target_x_screen);
+            line_points.push(target_y_screen);
+        }
+        currentPath.setAttrs({
+            x: 0,
+            y: 0,
+            points: line_points,
+            stroke: 'red',
+            tension: 0
+        })
+        arrowsLayer.batchDraw();
+    }
+}
+
 
 function driveToTarget(target_id) {
     console.log("Send drive to target", target_id, "signal");
@@ -472,6 +538,7 @@ function redraw_map(scale, robot_x_pos, robot_y_pos) {
         map_image_element.moveToBottom();
         mapLayer.batchDraw();
         updateTargets();
+        redrawPath();
     }
 }
 
@@ -521,6 +588,21 @@ window.onload = function () {
 
     targets_table = document.getElementById('targets').getElementsByTagName('tbody')[0];
     routeStatusLabel = document.getElementById('route-status');
+
+    loading_dropdown = document.getElementById('loading-station');
+    unloading_dropdown = document.getElementById('unloading-station');
+
+    currentPath = new Konva.Line({
+        x: 0,
+        y: 0,
+        points: [],
+        stroke: 'red',
+        tension: 0
+    });
+
+    currentPosesArray = [];
+
+    arrowsLayer.add(currentPath);
 
     socket.on('robot_pose', function (robot_coordinates) {
         robot_position.x = robot_coordinates.x_pos;
@@ -614,10 +696,15 @@ window.onload = function () {
         routeStatusLabel.innerHTML = "Dest " + status.label + " [" + status.seq + "/" + status.max + "]";
     });
 
+    socket.on('current_plan', function (plan_object) {
+        redrawPath(plan_object.path.poses);
+    });
+
     saveCurrentPosDialog = document.getElementById("saveCurrentPosDialog");
     uploadCustomMapDialog = document.getElementById("uploadCustomMapDialog");
     uploadMapProgressBar = document.getElementById("mapUploadProgress");
     routeManagerDialog = document.getElementById("routeManagerDialog");
+    pathCreatorDialog = document.getElementById("pathCreatorDialog");
 
     stageDiv.addEventListener("wheel", mapResizeCallback);
 
