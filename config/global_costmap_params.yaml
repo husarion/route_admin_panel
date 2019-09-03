@@ -1,0 +1,8 @@
+global_costmap:
+  update_frequency: 2.5
+  publish_frequency: 2.5
+  transform_tolerance: 0.25
+  static_map: true
+  rolling_window: false
+  inflation_radius: 0.15
+  resolution: 0.01

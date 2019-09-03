@@ -1,0 +1,8 @@
+local_costmap:
+  update_frequency: 10
+  publish_frequency: 10
+  transform_tolerance: 0.25
+  static_map: true
+  rolling_window: false
+  resolution: 0.01
+  inflation_radius: 0.05

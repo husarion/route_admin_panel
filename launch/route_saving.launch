@@ -1,0 +1,31 @@
+<launch>
+
+    <node pkg="route_admin_panel" type="node_server.sh" name="node_server" output="screen"/>
+
+    <node pkg="husarion_ros" type="map_to_img_node" name="map_to_img" output="screen">
+        <param name="tile_width" value="640"/>
+        <param name="tile_height" value="480"/>
+        <param name="parent_frame" value="/map"/>
+        <param name="child_frame" value="/base_link"/>
+        <param name="draw_robot" value="false"/>
+        <param name="publish_full_map" value="true"/>
+        <param name="publish_map_tile" value="false"/>
+    </node>
+
+    <node pkg="move_base" type="move_base" name="move_base" output="screen">
+        <param name="recovery_behavior_enabled" value="true"/>
+        <param name="controller_frequency" value="10.0"/>
+        <rosparam file="$(find route_admin_panel)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find route_admin_panel)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find route_admin_panel)/config/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find route_admin_panel)/config/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find route_admin_panel)/config/trajectory_planner.yaml" command="load" />
+    </node>
+
+    <node pkg="tf" type="static_transform_publisher" name="tf_pub_1" args="0 0 0 0 0 0 map odom 100" />
+
+    <node pkg="tf" type="static_transform_publisher" name="tf_pub_2" args="0 0 0 0 0 0 odom base_link 100" />
+
+    <node pkg="tf" type="static_transform_publisher" name="tf_pub_3" args="0 0 0 0 0 0 base_link laser 100" />
+
+</launch>
