@@ -20,17 +20,6 @@ curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
-Clone and build `rosnodejs`:
-
-```bash
-mkdir ~/husarion_rosnodejs
-cd ~/husarion_rosnodejs
-git clone https://github.com/RethinkRobotics-opensource/rosnodejs.git
-cd ~/husarion_rosnodejs/rosnodejs
-npm install
-npm pack
-```
-
 Create workspace and clone dependency repositories, it may happen that you already have it done, in that case, skip this step:
 
 ```bash
@@ -51,13 +40,11 @@ cd ~/ros_workspace/src
 git clone https://github.com/husarion/route_admin_panel.git
 ```
 
-Install rosnodejs and dependencies:
+Install dependencies:
 
 ```bash 
-cp ~/husarion_rosnodejs/rosnodejs/rosnodejs-3.0.0.tgz ~/ros_workspace/src/route_admin_panel/nodejs
-cd ~/ros_workspace/src/route_admin_panel/nodejs/
-npm install rosnodejs-3.0.0.tgz
-npm install express socket.io quaternion-to-euler math3d multer
+cd ~/ros_workspace/src/route_admin_panel/nodejs
+npm install rosnodejs express socket.io quaternion-to-euler math3d multer
 npm install
 mkdir user_maps
 echo '{"targetList": {"targets": []}}' > user_maps/config.json
