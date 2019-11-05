@@ -8,6 +8,7 @@ const rosnodejs = require('rosnodejs');
 var quaternionToEuler = require('quaternion-to-euler');
 var math3d = require('math3d');
 const fs = require('fs');
+const yargs = require('yargs');
 
 const NavTargets = require('./nav_targets.js');
 const TfListener = require('./tf_listener.js');
@@ -60,6 +61,27 @@ var current_plan;
 
 var routePlanner = new RoutePlanner.RoutePlanner();
 var route_active = false;
+
+const argv = yargs
+    .option('map_scale_min', {
+        description: 'Minimal map scale',
+        default: 5,
+        alias: 'min',
+        type: 'number'
+    })
+    .option('map_scale_max', {
+        alias: 'max',
+        default: 100,
+        description: 'Maximal map scale',
+        type: 'number',
+    })
+    .help()
+    .alias('help', 'h')
+    .version(false)
+    .argv;
+
+console.log("Map scale: [", argv.map_scale_min, ", ", argv.map_scale_max, "]")
+
 function save_config() {
     let confObject = {
         customMapFile: custom_map_file,
@@ -349,6 +371,12 @@ io.on('connection', function (socket) {
             });
     })
 
+    let scale_range = {
+        min: argv.map_scale_min,
+        max: argv.map_scale_max
+    }
+    io.emit('set_scale_range', scale_range);
+
     targets.targets.forEach(emit_target);
     for (let i = 0; i < routePlanner.goalList.length; i++) {
         emit_route_point(i, routePlanner.goalList[i].getNavID(), routePlanner.goalList[i].getRouteID());
@@ -379,18 +407,18 @@ rosnodejs.initNode('/rosnodejs')
                 });
                 emit_robot_pose();
             }, {
-                queueSize: 1,
-                throttleMs: 0
-            }
+            queueSize: 1,
+            throttleMs: 0
+        }
         );
 
         let map_metadata_subscriber = rosNode.subscribe('/map_metadata', 'nav_msgs/MapMetaData',
             (data) => {
                 map_metadata = data;
             }, {
-                queueSize: 1,
-                throttleMs: 0
-            }
+            queueSize: 1,
+            throttleMs: 0
+        }
         );
 
         let map_subscriber = rosNode.subscribe('/map_image/full/compressed', 'sensor_msgs/CompressedImage',
@@ -398,9 +426,9 @@ rosnodejs.initNode('/rosnodejs')
                 map_data_blob = data.data;
                 emit_map_update();
             }, {
-                queueSize: 1,
-                throttleMs: 0
-            }
+            queueSize: 1,
+            throttleMs: 0
+        }
         );
 
         const nh = rosnodejs.nh;

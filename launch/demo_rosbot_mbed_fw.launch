@@ -1,10 +1,12 @@
 <launch>
 
     <!-- <arg name="ws2812b_leds" default="false" /> -->
+    <arg name="admin_panel_map_scale_min" default="5"/>
+    <arg name="admin_panel_map_scale_max" default="100"/>
 
     <node pkg="tf" type="static_transform_publisher" name="ROSbot_laser" args="0 0 0 3.14 0 0 base_link laser 100" />
 
-    <node pkg="route_admin_panel" type="node_server.sh" name="node_server" output="screen"/>
+    <node pkg="route_admin_panel" type="node_server.sh" name="node_server" output="screen" args="--min $(arg admin_panel_map_scale_min) --max $(arg admin_panel_map_scale_max)"/>
 
     <include file="$(find rplidar_ros)/launch/rplidar.launch"></include>
 

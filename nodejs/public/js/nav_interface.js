@@ -700,6 +700,12 @@ window.onload = function () {
         redrawPath(plan_object.path.poses);
     });
 
+    socket.on('set_scale_range', function (scale_range) {
+        console.log("Map scale: [", scale_range.min, ", ", scale_range.max, "]")
+        document.getElementById("map-zoom").min = scale_range.min;
+        document.getElementById("map-zoom").max = scale_range.max;
+    });
+
     saveCurrentPosDialog = document.getElementById("saveCurrentPosDialog");
     uploadCustomMapDialog = document.getElementById("uploadCustomMapDialog");
     uploadMapProgressBar = document.getElementById("mapUploadProgress");
