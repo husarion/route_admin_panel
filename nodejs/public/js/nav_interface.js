@@ -83,6 +83,19 @@ function setZoomSliderCheckboxListener() {
     checkbox.checked = true;
 }
 
+function cancelNewTarget() {
+    document.getElementById('konva-container').removeEventListener('mousedown', initNewTargetArrow);
+    document.getElementById('konva-container').removeEventListener('mousemove', rotateNewTargetArrow);
+    document.getElementById('konva-container').removeEventListener('mousedown', acceptNewTarget);
+    if (newTargetArrow) {
+        newTargetArrow.remove();
+    }
+    if (newTargetLayer) {
+        newTargetLayer.remove();
+    }
+    stage.draw();
+}
+
 function acceptNewTarget(event) {
     document.getElementById('konva-container').removeEventListener('mousemove', rotateNewTargetArrow);
     document.getElementById('konva-container').removeEventListener('mousedown', acceptNewTarget);
@@ -100,8 +113,8 @@ function acceptNewTarget(event) {
 function rotateNewTargetArrow(event) {
     let arrowTipX = event.clientX - newTargetArrow.attrs.x;
     let arrowTipY = event.clientY - newTargetArrow.attrs.y;
-    let arrowBaseX = newTargetArrow.attrs.x - event.clientX;
-    let arrowBaseY = newTargetArrow.attrs.y - event.clientY;
+    let arrowBaseX = 0;
+    let arrowBaseY = 0;
     newTargetArrow.attrs.points = [arrowBaseX, arrowBaseY, arrowTipX, arrowTipY];
     stage.draw();
 }
@@ -123,6 +136,23 @@ function initNewTargetArrow(event) {
     document.getElementById('konva-container').addEventListener('mousedown', acceptNewTarget);
 }
 
+$(document).keydown(function (e) {
+    if (e.key === "Escape") { // escape key maps to keycode `27`
+        console.log("Escape pressed");
+        dismissAllDialogs();
+    }
+});
+
+function dismissAllDialogs() {
+    dismissCurrentPosDialog();
+    dismissPathCreatorDialog();
+    dismissRouteManagerDialog();
+    dismissUploadCustomMapDialog();
+    cancelNewTarget();
+}
+
+
+
 function addTargetDialog() {
     newTargetLayer = new Konva.Layer();
     stage.add(newTargetLayer);
@@ -130,10 +160,12 @@ function addTargetDialog() {
 }
 
 function showUploadCustomMapDialog() {
+    dismissAllDialogs();
     uploadCustomMapDialog.style.display = "block";
 }
 
 function showRouteManagerDialog() {
+    dismissAllDialogs();
     let existing_poses_table = document.getElementById('existing_poses').getElementsByTagName('tbody')[0];
     for (var i = existing_poses_table.rows.length - 1; i >= 0; i--) {
         existing_poses_table.deleteRow(i);
@@ -152,6 +184,7 @@ function showRouteManagerDialog() {
 }
 
 function showPathCreatorDialog() {
+    dismissAllDialogs();
     while (loading_dropdown.firstChild) {
         loading_dropdown.removeChild(loading_dropdown.firstChild);
     }
@@ -225,6 +258,7 @@ function uploadCustomMapConfirm() {
 }
 
 function saveCurrentPosition(x, y, theta) {
+    dismissAllDialogs();
     let currentX_cell = document.getElementById('currentPosX');
     let currentY_cell = document.getElementById('currentPosY');
     let currentTheta_cell = document.getElementById('currentPosTheta');
@@ -251,13 +285,13 @@ function saveCurrentPosition(x, y, theta) {
 
 window.onclick = function (event) {
     if (event.target == saveCurrentPosDialog) {
-        dismissCurrentPosDialog();
+        dismissAllDialogs();
     } else if (event.target == uploadCustomMapDialog) {
-        dismissUploadCustomMapDialog();
+        dismissAllDialogs();
     } else if (event.target == routeManagerDialog) {
-        dismissRouteManagerDialog();
+        dismissAllDialogs();
     } else if (event.target == pathCreatorDialog) {
-        dismissPathCreatorDialog();
+        dismissAllDialogs();
     }
 }
 

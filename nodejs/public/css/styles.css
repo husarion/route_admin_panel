@@ -49,6 +49,16 @@ nav {
   z-index: 2;
 }
 
+.noselect {
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  -webkit-touch-callout: none;
+  -khtml-user-select: none;
+  user-select: none;
+}
+
 .dest-on-map {
   position: absolute;
 }
@@ -63,7 +73,7 @@ nav {
 .modal {
   display: none;
   position: fixed;
-  z-index: 1;
+  z-index: 3;
   left: 0;
   top: 0;
   width: 100%;
