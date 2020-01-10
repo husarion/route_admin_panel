@@ -1,6 +1,6 @@
 var math3d = require('math3d');
-const rosnodejs = require('rosnodejs');
-const geometry_msgs = rosnodejs.require('geometry_msgs').msg;
+const rclnodejs = require('rclnodejs');
+const geometry_msgs = rclnodejs.require('geometry_msgs').msg;
 
 class TfListener {
     constructor() {

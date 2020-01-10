@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<package format="2">
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>route_admin_panel</name>
   <version>0.0.1</version>
   <description>The route_admin_panel package allows user to send goals to move_base by using web browser.</description>
@@ -7,6 +8,15 @@
   <license>LGPLv3</license>
 
   <author email="lukasz.mitka@husarion.com">Łukasz Mitka</author>
-  <buildtool_depend>catkin</buildtool_depend>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>nav2_bringup</depend>
+  <depend>slam_toolbox</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 
 </package>

@@ -4,7 +4,7 @@ var app = require('express')();
 var express = require('express');
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
-const rosnodejs = require('rosnodejs');
+const rclnodejs = require('rclnodejs');
 var quaternionToEuler = require('quaternion-to-euler');
 var math3d = require('math3d');
 const fs = require('fs');
@@ -13,11 +13,10 @@ const yargs = require('yargs');
 const NavTargets = require('./nav_targets.js');
 const TfListener = require('./tf_listener.js');
 
-const std_msgs = rosnodejs.require('std_msgs').msg;
-const nav_msgs = rosnodejs.require('nav_msgs').msg;
-const geometry_msgs = rosnodejs.require('geometry_msgs').msg;
-const move_base_msgs = rosnodejs.require('move_base_msgs').msg;
-const nav_msgs_service = rosnodejs.require('nav_msgs').srv;
+const std_msgs = rclnodejs.require('std_msgs').msg;
+const nav_msgs = rclnodejs.require('nav_msgs').msg;
+const geometry_msgs = rclnodejs.require('geometry_msgs').msg;
+const nav_msgs_service = rclnodejs.require('nav_msgs').srv;
 const RoutePlanner = require('./route_planner.js');
 
 var multer = require('multer');
@@ -231,7 +230,7 @@ function emit_current_path(path) {
 
 function drive_to_target(navID) {
     let target = targets.get_target_by_id(navID);
-    let move_base_goal = new move_base_msgs.MoveBaseGoal();
+    // let move_base_goal = new move_base_msgs.MoveBaseGoal();
     let set_point = new geometry_msgs.PoseStamped();
     let target_quaternion = math3d.Quaternion.Euler(0, 0, target.theta * 180 / Math.PI);
     set_point.header.frame_id = "map";
@@ -242,10 +241,10 @@ function drive_to_target(navID) {
     set_point.pose.orientation.y = target_quaternion.y;
     set_point.pose.orientation.z = target_quaternion.z;
     set_point.pose.orientation.w = target_quaternion.w;
-    move_base_goal.target_pose = set_point;
-    let goal_handle = moveBase_actionClient.sendGoal(move_base_goal);
-    console.log(goal_handle._goal.goal_id);
-    return goal_handle._goal.goal_id;
+    // move_base_goal.target_pose = set_point;
+    // let goal_handle = moveBase_actionClient.sendGoal(move_base_goal);
+    // console.log(goal_handle._goal.goal_id);
+    return 0; //goal_handle._goal.goal_id;
 }
 
 io.on('connection', function (socket) {
@@ -391,98 +390,100 @@ http.listen(8000, function () {
     console.log('listening on *:8000');
 });
 
-rosnodejs.initNode('/rosnodejs')
-    .then((rosNode) => {
-        robot_pose_emit_timestamp = Date.now();
-        zoom_publisher = rosNode.advertise('/map_zoom', std_msgs.Int16, default_publisher_options);
+rclnodejs.init().then(() => {
+    const rosNode = rclnodejs.createNode('rap_server_node');
+    robot_pose_emit_timestamp = Date.now();
+    zoom_publisher = rosNode.createPublisher(std_msgs.Int16, '/map_zoom');
 
-        let pose_subscriber = rosNode.subscribe('/tf', 'tf2_msgs/TFMessage',
-            (data) => {
-                data.transforms.forEach(transform_stamped => {
-                    if (!tfTree.frame_id) {
-                        tfTree = new TfListener.TfTree(transform_stamped.header.frame_id);
-                    }
-                    let transform = new TfListener.TfTransform(transform_stamped.header.frame_id, transform_stamped.child_frame_id, transform_stamped.header.stamp, transform_stamped.transform);
-                    tfTree.add_transform(transform, 0);
-                });
-                emit_robot_pose();
-            }, {
-            queueSize: 1,
-            throttleMs: 0
-        }
-        );
-
-        let map_metadata_subscriber = rosNode.subscribe('/map_metadata', 'nav_msgs/MapMetaData',
-            (data) => {
-                map_metadata = data;
-            }, {
-            queueSize: 1,
-            throttleMs: 0
-        }
-        );
-
-        let map_subscriber = rosNode.subscribe('/map_image/full/compressed', 'sensor_msgs/CompressedImage',
-            (data) => {
-                map_data_blob = data.data;
-                emit_map_update();
-            }, {
-            queueSize: 1,
-            throttleMs: 0
-        }
-        );
-
-        const nh = rosnodejs.nh;
-        moveBase_actionClient = new rosnodejs.ActionClient({
-            nh,
-            type: 'move_base_msgs/MoveBase',
-            actionServer: '/move_base'
-        });
-        console.log("Subscribe to move_base updates");
-
-        serviceClient = nh.serviceClient('/move_base/make_plan', nav_msgs_service.GetPlan);
-
-        plan_publisher = rosNode.advertise('/plan', nav_msgs.Path, default_publisher_options);
-
-        moveBase_actionClient._acInterface.on('result', (data) => {
-            console.log("Received move_base: result\n", data);
-            if (data.status.status == 3) {
-                if (route_active) {
-                    switch (routePlanner.sequenceMode) {
-                        case RoutePlanner.SequenceModes.LOOP_RUN:
-                            break;
-                        case RoutePlanner.SequenceModes.SINGLE_RUN:
-                            break;
-                        case RoutePlanner.SequenceModes.BACK_AND_FORTH:
-                            break;
-                    }
-                    let goalNavID = routePlanner.getNextGoal();
-                    if (!goalNavID) {
-                        console.log("End of route");
-                        route_active = false;
-                    } else {
-                        let actionGoalID = drive_to_target(goalNavID);
-                        let routeID;
-                        let sequence;
-                        let goalLabel;
-                        for (let i = 0; i < routePlanner.goalList.length; i++) {
-                            if (routePlanner.goalList[i].getNavID() == goalNavID) {
-                                routeID = routePlanner.goalList[i].getRouteID();
-                                sequence = i;
-                                goalLabel = targets.get_target_by_id(goalNavID).label;
-                            }
-                        }
-                        routePlanner.goalAccepted(routeID, actionGoalID);
-                        emit_route_status_update(goalLabel, sequence, routePlanner.goalList.length - 1);
-                    }
-
-                } else {
-                    emit_route_status_update("Finished", 0, 0);
+    rosNode.createSubscription('tf2_msgs/msg/TFMessage', '/tf',
+        (data) => {
+            data.transforms.forEach(transform_stamped => {
+                if (!tfTree.frame_id) {
+                    tfTree = new TfListener.TfTree(transform_stamped.header.frame_id);
                 }
-            } else {
-                emit_route_status_update("CANCELLED", 0, 0);
-            }
-        });
-    })
-    .catch((err) => {
-        rosnodejs.log.error(err.stack);
-    });
+                let transform = new TfListener.TfTransform(transform_stamped.header.frame_id, transform_stamped.child_frame_id, transform_stamped.header.stamp, transform_stamped.transform);
+                tfTree.add_transform(transform, 0);
+            });
+            emit_robot_pose();
+        }, {
+        queueSize: 1,
+        throttleMs: 0
+    }
+    );
+
+    rosNode.createSubscription('nav_msgs/msg/MapMetaData', '/map_metadata',
+        (data) => {
+            map_metadata = data;
+        }, {
+        queueSize: 1,
+        throttleMs: 0
+    }
+    );
+
+    rosNode.createSubscription('sensor_msgs/msg/CompressedImage', '/map_image/full/compressed',
+        (data) => {
+            map_data_blob = data.data;
+            emit_map_update();
+        }, {
+        queueSize: 1,
+        throttleMs: 0
+    }
+    );
+
+    // const nh = rosnodejs.nh;
+    // moveBase_actionClient = new rclnodejs.ActionClient({
+    //     nh,
+    //     type: 'move_base_msgs/MoveBase',
+    //     actionServer: '/move_base'
+    // });
+    // console.log("Subscribe to move_base updates");
+
+    // serviceClient = nh.serviceClient('/move_base/make_plan', nav_msgs_service.GetPlan);
+
+    plan_publisher = rosNode.createPublisher(nav_msgs.Path, '/plan');
+
+    // moveBase_actionClient._acInterface.on('result', (data) => {
+    //     console.log("Received move_base: result\n", data);
+    //     if (data.status.status == 3) {
+    //         if (route_active) {
+    //             switch (routePlanner.sequenceMode) {
+    //                 case RoutePlanner.SequenceModes.LOOP_RUN:
+    //                     break;
+    //                 case RoutePlanner.SequenceModes.SINGLE_RUN:
+    //                     break;
+    //                 case RoutePlanner.SequenceModes.BACK_AND_FORTH:
+    //                     break;
+    //             }
+    //             let goalNavID = routePlanner.getNextGoal();
+    //             if (!goalNavID) {
+    //                 console.log("End of route");
+    //                 route_active = false;
+    //             } else {
+    //                 let actionGoalID = drive_to_target(goalNavID);
+    //                 let routeID;
+    //                 let sequence;
+    //                 let goalLabel;
+    //                 for (let i = 0; i < routePlanner.goalList.length; i++) {
+    //                     if (routePlanner.goalList[i].getNavID() == goalNavID) {
+    //                         routeID = routePlanner.goalList[i].getRouteID();
+    //                         sequence = i;
+    //                         goalLabel = targets.get_target_by_id(goalNavID).label;
+    //                     }
+    //                 }
+    //                 routePlanner.goalAccepted(routeID, actionGoalID);
+    //                 emit_route_status_update(goalLabel, sequence, routePlanner.goalList.length - 1);
+    //             }
+
+    //         } else {
+    //             emit_route_status_update("Finished", 0, 0);
+    //         }
+    //     } else {
+    //         emit_route_status_update("CANCELLED", 0, 0);
+    //     }
+    // });
+    rclnodejs.spin(rosNode);
+})
+.catch((err) => {
+    console.log("rclodejs error");
+    console.log(err);
+});
