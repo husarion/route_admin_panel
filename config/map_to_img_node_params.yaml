@@ -1,0 +1,4 @@
+map_to_img_node:
+    ros__parameters:
+        publish_map_metadata: true
+        format: png

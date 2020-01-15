@@ -19,14 +19,55 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(common_interfaces REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(message_filters REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(image_transport REQUIRED)
 
+####################
+## Add executable ##
+####################
+
+include_directories(
+  include
+)
+
+set(executable_name map_to_img_node)
+add_executable(${executable_name}
+  src/map_to_img.cpp 
+  src/MapAsImageProvider.cpp
+)
+
+ament_target_dependencies(${executable_name}
+  "geometry_msgs"
+  "rclcpp"
+  "rclcpp_action"
+  "tf2"
+  "tf2_msgs"
+  "tf2_ros"
+  "image_transport"
+  "cv_bridge"
+  "nav_msgs"
+)
 
 #############
 ## Install ##
 #############
 
+install(TARGETS ${executable_name}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
 
-install(DIRECTORY config images launch nodejs scripts
+install(DIRECTORY config images include launch maps nodejs scripts
   DESTINATION share/${PROJECT_NAME}
 )
 

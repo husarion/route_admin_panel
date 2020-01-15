@@ -693,7 +693,7 @@ window.onload = function () {
     });
 
     socket.on('map_update', function (map_data) {
-        var blob = new Blob([map_data.blob], { type: 'image/png' });
+        var blob = new Blob([new Uint8Array(Object.values(map_data.blob))], { type: 'image/png' });
         map_metadata = map_data.metadata;
         var url = URL.createObjectURL(blob);
         Konva.Image.fromURL(url, function (mapImageNode) {

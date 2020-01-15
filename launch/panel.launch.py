@@ -18,6 +18,12 @@ def generate_launch_description():
         output='log'
     )
 
+    map_to_img = launch_ros.actions.Node(
+        package='route_admin_panel',
+        node_executable='map_to_img_node',
+        output='screen',
+        parameters=[os.path.join(rap_package_dir, 'config', 'map_to_img_node_params.yaml')]
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -25,6 +31,7 @@ def generate_launch_description():
             default_value='false'
         ),
         rap_server,
+        map_to_img,
     ])
 
 if __name__ == '__main__':
