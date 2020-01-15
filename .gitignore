@@ -4,3 +4,7 @@ user_images
 user_maps
 module_sources
 rosnodejs*.tgz
+build
+install
+log
+notes
