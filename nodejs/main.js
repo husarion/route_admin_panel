@@ -9,12 +9,14 @@ var quaternionToEuler = require('quaternion-to-euler');
 var math3d = require('math3d');
 const fs = require('fs');
 const yargs = require('yargs');
+const uuidv1 = require('uuid/v1');
 
 const NavTargets = require('./nav_targets.js');
 const TfListener = require('./tf_listener.js');
 
 const std_msgs = rclnodejs.require('std_msgs').msg;
 const nav_msgs = rclnodejs.require('nav_msgs').msg;
+const nav2_msgs = rclnodejs.require('nav2_msgs').action;
 const geometry_msgs = rclnodejs.require('geometry_msgs').msg;
 const nav_msgs_service = rclnodejs.require('nav_msgs').srv;
 const RoutePlanner = require('./route_planner.js');
@@ -52,7 +54,7 @@ var configFileName = './user_maps/config.json';
 var tfTree = new TfListener.TfTree();
 var robot_pose_emit_timestamp;
 
-var moveBase_actionClient
+var nav2_actionClient;
 
 var serviceClient;
 var plan_publisher;
@@ -116,7 +118,7 @@ const default_publisher_options = {
 }
 
 function emit_map_update() {
-    if (map_metadata) {
+    if (map_metadata && map_data_blob) {
         let map_update = {
             blob: map_data_blob,
             metadata: map_metadata
@@ -230,21 +232,24 @@ function emit_current_path(path) {
 
 function drive_to_target(navID) {
     let target = targets.get_target_by_id(navID);
-    // let move_base_goal = new move_base_msgs.MoveBaseGoal();
-    let set_point = new geometry_msgs.PoseStamped();
+    let action_goal = new nav2_msgs.NavigateToPose.Goal();
+    let arr = new Array();
     let target_quaternion = math3d.Quaternion.Euler(0, 0, target.theta * 180 / Math.PI);
-    set_point.header.frame_id = "map";
-    set_point.header.stamp.secs = Date.now() / 1000;
-    set_point.pose.position.x = target.x;
-    set_point.pose.position.y = target.y;
-    set_point.pose.orientation.x = target_quaternion.x;
-    set_point.pose.orientation.y = target_quaternion.y;
-    set_point.pose.orientation.z = target_quaternion.z;
-    set_point.pose.orientation.w = target_quaternion.w;
-    // move_base_goal.target_pose = set_point;
-    // let goal_handle = moveBase_actionClient.sendGoal(move_base_goal);
-    // console.log(goal_handle._goal.goal_id);
-    return 0; //goal_handle._goal.goal_id;
+    uuidv1(null, arr, 0);
+    action_goal._refObject.goal_id.uuid = arr;
+    action_goal._refObject.pose.header.frame_id.data = "map";
+    action_goal._refObject.pose.header.frame_id.size = 4;
+    action_goal._refObject.pose.header.frame_id.capacity = 4;
+    action_goal._refObject.pose.header.stamp.sec = Date.now() / 1000;
+    action_goal._refObject.pose.pose.position.x = target.x;
+    action_goal._refObject.pose.pose.position.y = target.y;
+    action_goal._refObject.pose.pose.orientation.x = target_quaternion.x;
+    action_goal._refObject.pose.pose.orientation.y = target_quaternion.y;
+    action_goal._refObject.pose.pose.orientation.z = target_quaternion.z;
+    action_goal._refObject.pose.pose.orientation.w = target_quaternion.w;
+    let sequnece_number = nav2_actionClient.sendGoal(action_goal._refObject);
+    nav2_actionClient._goal_uuid = arr;
+    return sequnece_number;
 }
 
 io.on('connection', function (socket) {
@@ -309,7 +314,7 @@ io.on('connection', function (socket) {
         routePlanner.sequenceMode = mode;
         route_active = true;
         let goalNavID = routePlanner.getNextGoal();
-        let actionGoalID = drive_to_target(goalNavID);
+        let goal_sequence_number = drive_to_target(goalNavID);
         let routeID;
         let sequence;
         let goalLabel;
@@ -320,7 +325,7 @@ io.on('connection', function (socket) {
                 goalLabel = targets.get_target_by_id(goalNavID).label;
             }
         }
-        routePlanner.goalAccepted(routeID, actionGoalID);
+        routePlanner.goalAccepted(routeID, goal_sequence_number);
         emit_route_status_update(goalLabel, sequence, routePlanner.goalList.length - 1);
     });
 
@@ -421,69 +426,88 @@ rclnodejs.init().then(() => {
     );
 
     rosNode.createSubscription('sensor_msgs/msg/CompressedImage', '/map_image/full/compressed',
+        {
+            queueSize: 1,
+            throttleMs: 0
+        },
         (data) => {
             map_data_blob = data.data;
             emit_map_update();
-        }, {
-        queueSize: 1,
-        throttleMs: 0
-    }
+        }
     );
-
-    // const nh = rosnodejs.nh;
-    // moveBase_actionClient = new rclnodejs.ActionClient({
-    //     nh,
-    //     type: 'move_base_msgs/MoveBase',
-    //     actionServer: '/move_base'
-    // });
-    // console.log("Subscribe to move_base updates");
 
     // serviceClient = nh.serviceClient('/move_base/make_plan', nav_msgs_service.GetPlan);
 
     plan_publisher = rosNode.createPublisher(nav_msgs.Path, '/plan');
 
-    // moveBase_actionClient._acInterface.on('result', (data) => {
-    //     console.log("Received move_base: result\n", data);
-    //     if (data.status.status == 3) {
-    //         if (route_active) {
-    //             switch (routePlanner.sequenceMode) {
-    //                 case RoutePlanner.SequenceModes.LOOP_RUN:
-    //                     break;
-    //                 case RoutePlanner.SequenceModes.SINGLE_RUN:
-    //                     break;
-    //                 case RoutePlanner.SequenceModes.BACK_AND_FORTH:
-    //                     break;
-    //             }
-    //             let goalNavID = routePlanner.getNextGoal();
-    //             if (!goalNavID) {
-    //                 console.log("End of route");
-    //                 route_active = false;
-    //             } else {
-    //                 let actionGoalID = drive_to_target(goalNavID);
-    //                 let routeID;
-    //                 let sequence;
-    //                 let goalLabel;
-    //                 for (let i = 0; i < routePlanner.goalList.length; i++) {
-    //                     if (routePlanner.goalList[i].getNavID() == goalNavID) {
-    //                         routeID = routePlanner.goalList[i].getRouteID();
-    //                         sequence = i;
-    //                         goalLabel = targets.get_target_by_id(goalNavID).label;
-    //                     }
-    //                 }
-    //                 routePlanner.goalAccepted(routeID, actionGoalID);
-    //                 emit_route_status_update(goalLabel, sequence, routePlanner.goalList.length - 1);
-    //             }
+    nav2_actionClient = rosNode.createActionClient(
+        'nav2_msgs/action/NavigateToPose',
+        'NavigateToPose',
+        {
+            queueSize: 1,
+            throttleMs: 1
+        },
+        (data) => {
+            data.status_list.forEach(status => {
+                let status_id = new Array();
+                status.goal_info.goal_id.uuid.forEach((byte) => {
+                    status_id.push(byte);
+                })
+                if (JSON.stringify(status_id) === JSON.stringify(nav2_actionClient._goal_uuid)) {
+                    if (nav2_actionClient.GOAL_STATES[status.status - 1] == 'SUCCEEDED') {
+                        if (route_active) {
+                            switch (routePlanner.sequenceMode) {
+                                case RoutePlanner.SequenceModes.LOOP_RUN:
+                                    break;
+                                case RoutePlanner.SequenceModes.SINGLE_RUN:
+                                    break;
+                                case RoutePlanner.SequenceModes.BACK_AND_FORTH:
+                                    break;
+                            }
+                            let goalNavID = routePlanner.getNextGoal();
+                            if (!goalNavID) {
+                                console.log("End of route");
+                                route_active = false;
+                            } else {
+                                let goal_sequence_number = drive_to_target(goalNavID);
+                                let routeID;
+                                let sequence;
+                                let goalLabel;
+                                for (let i = 0; i < routePlanner.goalList.length; i++) {
+                                    if (routePlanner.goalList[i].getNavID() == goalNavID) {
+                                        routeID = routePlanner.goalList[i].getRouteID();
+                                        sequence = i;
+                                        goalLabel = targets.get_target_by_id(goalNavID).label;
+                                    }
+                                }
+                                routePlanner.goalAccepted(routeID, goal_sequence_number);
+                                emit_route_status_update(goalLabel, sequence, routePlanner.goalList.length - 1);
+                            }
 
-    //         } else {
-    //             emit_route_status_update("Finished", 0, 0);
-    //         }
-    //     } else {
-    //         emit_route_status_update("CANCELLED", 0, 0);
-    //     }
-    // });
+                        } else {
+                            emit_route_status_update("Finished", 0, 0);
+                        }
+                    }
+                    else {
+                        emit_route_status_update("CANCELLED", 0, 0);
+                    }
+                }
+            })
+        },
+        (data) => {
+            console.log("Received feedback: ", data);
+        },
+        (data) => {
+            console.log("Received goal response: ", data);
+        },
+        (data) => {
+            console.log("Received result response: ", data);
+        }
+    );
+
     rclnodejs.spin(rosNode);
 })
-.catch((err) => {
-    console.log("rclodejs error");
-    console.log(err);
-});
+    .catch((err) => {
+        console.log("rclodejs error");
+        console.log(err);
+    });
