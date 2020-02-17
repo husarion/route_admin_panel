@@ -5,7 +5,7 @@ The **Route admin panel** is a web user interface for managing routes of ROS bas
 It allows to:
 - Define destination points
 - Save robot position as destination point
-- Send destination point to `move_base`
+- Send destination point to navigation stack
 - Upload custom map
 - Set a sequence of destination points
 
@@ -26,25 +26,25 @@ Create workspace and clone dependency repositories, it may happen that you alrea
 mkdir ~/ros_workspace
 mkdir ~/ros_workspace/src
 cd ~/ros_workspace/src
-catkin_init_workspace 
-echo '. ~/ros_workspace/devel/setup.sh' >> ~/.bashrc
+echo '. ~/ros_workspace/install/setup.sh' >> ~/.bashrc
 
-git clone https://github.com/husarion/husarion_ros.git
-git clone https://github.com/husarion/rosbot_description.git
+git clone -b ros2 --single-branch https://github.com/husarion/rosbot_description.git
 ```
 
 Clone `route_admin_panel` repository:
 
 ```bash
 cd ~/ros_workspace/src
-git clone https://github.com/husarion/route_admin_panel.git
+git clone -b ros2 --single-branch https://github.com/husarion/route_admin_panel.git
 ```
 
 Install dependencies:
 
 ```bash 
 cd ~/ros_workspace/src/route_admin_panel/nodejs
-npm install rclnodejs express socket.io quaternion-to-euler math3d multer yargs
+npm install express socket.io quaternion-to-euler math3d multer yargs
+wget https://forked-rclnodejs.s3-eu-west-1.amazonaws.com/rclnodejs-0.10.3.tgz
+npm install rclnodejs-0.10.3.tgz
 npm install
 mkdir user_maps
 echo '{"targetList": {"targets": []}}' > user_maps/config.json
@@ -54,8 +54,8 @@ Build workspace:
 
 ```bash
 cd ~/ros_workspace
-catkin_make
-. ~/ros_workspace/devel/setup.sh
+colcon build --symlink-install
+. ~/ros_workspace/install/setup.sh
 ```
 
 ## How to use
@@ -74,22 +74,11 @@ Depending on your ROSbot version, you can start it with:
     ```bash
     roslaunch route_admin_panel demo_rosbot_pro.launch
     ```
+
 - for Gazebo simulator:
 
     ```bash
     roslaunch route_admin_panel demo_gazebo.launch
-    ```
-
-- for ROSbot 2.0 with [Mbed firmware](https://github.com/husarion/rosbot-firmware-new):
-
-    ```bash
-    roslaunch route_admin_panel demo_rosbot_mbed_fw.launch
-    ```
-
-- for ROSbot 2.0 PRO with [Mbed firmware](https://github.com/husarion/rosbot-firmware-new):
-
-    ```bash
-    roslaunch route_admin_panel demo_rosbot_pro_mbed_fw.launch
     ```
 
 Once all nodes are running, go to web browser and type in address bar:
