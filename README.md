@@ -63,33 +63,34 @@ catkin_make
 Panel comes with prepared launch files for `move_base`, `gmapping`, `node.js` server and all other required components.
 Depending on your ROSbot version, you can start it with:
 
-- for ROSbot 2.0:
+- for ROSbot 2.0 with [Mbed firmware](https://github.com/husarion/rosbot-firmware-new):
+    
+    ```bash
+    roslaunch route_admin_panel demo_rosbot_mbed_fw.launch
+    ```
+    
+- for ROSbot 2.0 PRO with [Mbed firmware](https://github.com/husarion/rosbot-firmware-new):
 
     ```bash
-    roslaunch route_admin_panel demo_rosbot.launch
+    roslaunch route_admin_panel demo_rosbot_pro_mbed_fw.launch
     ```
 
-- for ROSbot 2.0 PRO:
-
-    ```bash
-    roslaunch route_admin_panel demo_rosbot_pro.launch
-    ```
 - for Gazebo simulator:
 
     ```bash
     roslaunch route_admin_panel demo_gazebo.launch
     ```
 
-- for ROSbot 2.0 with [Mbed firmware](https://github.com/husarion/rosbot-firmware-new):
+- [deprecated] for ROSbot 2.0 with hFramework:
 
     ```bash
-    roslaunch route_admin_panel demo_rosbot_mbed_fw.launch
+    roslaunch route_admin_panel demo_rosbot.launch
     ```
 
-- for ROSbot 2.0 PRO with [Mbed firmware](https://github.com/husarion/rosbot-firmware-new):
+- [deprecated] for ROSbot 2.0 PRO with hFramework:
 
     ```bash
-    roslaunch route_admin_panel demo_rosbot_pro_mbed_fw.launch
+    roslaunch route_admin_panel demo_rosbot_pro.launch
     ```
 
 Once all nodes are running, go to web browser and type in address bar:
