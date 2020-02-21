@@ -67,7 +67,7 @@ install(TARGETS ${executable_name}
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY config images include launch maps nodejs scripts
+install(DIRECTORY config images include launch nodejs scripts
   DESTINATION share/${PROJECT_NAME}
 )
 
