@@ -26,13 +26,19 @@ def generate_launch_description():
         parameters=[os.path.join(rap_package_dir, 'config', 'map_to_img_node_params.yaml')]
     )
 
+    rosbot_sim = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            os.path.join(rosbot_description, 'launch', 'rosbot_sim.launch.py'))
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument(
             name='use_sim_time',
-            default_value='false'
+            default_value='true'
         ),
         rap_server,
-        map_to_img
+        map_to_img,
+        rosbot_sim,
     ])
 
 if __name__ == '__main__':
