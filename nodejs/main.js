@@ -36,9 +36,6 @@ var storage = multer.diskStorage({
 
 var upload = multer({ storage: storage });
 
-var zoom_publisher;
-
-const zoom_msg = new std_msgs.Int16();
 const drive_msg = new geometry_msgs.Twist();
 var cmd_vel_publisher;
 
@@ -258,11 +255,6 @@ io.on('connection', function (socket) {
         console.log('user disconnected');
     });
 
-    socket.on('map_scale', function (map_scale) {
-        zoom_msg.data = map_scale;
-        zoom_publisher.publish(zoom_msg);
-    });
-
     socket.on('drive_command', function (drive_command) {
         drive_msg.linear.x = drive_command.lin;
         drive_msg.angular.z = drive_command.ang;
@@ -398,7 +390,6 @@ http.listen(8000, function () {
 rclnodejs.init().then(() => {
     const rosNode = rclnodejs.createNode('rap_server_node');
     robot_pose_emit_timestamp = Date.now();
-    zoom_publisher = rosNode.createPublisher(std_msgs.Int16, '/map_zoom');
 
     rosNode.createSubscription('tf2_msgs/msg/TFMessage', '/tf',
         (data) => {

@@ -31,19 +31,11 @@ MapAsImageProvider::MapAsImageProvider() : Node("map_to_img_node")
       "/map", 1, std::bind(&MapAsImageProvider::mapUpdate, this, std::placeholders::_1));
 
   currentMap.info.resolution = 1;
-  setScale();
 }
 
 MapAsImageProvider::~MapAsImageProvider()
 {
   delete image_transport_;
-}
-
-void MapAsImageProvider::setScale(float scale)
-{
-  RCLCPP_INFO(this->get_logger(), "New scale is %f", scale);
-  map_scale = scale;
-  spacing = (int)round(map_scale / currentMap.info.resolution);
 }
 
 void MapAsImageProvider::publishFullMap(bool force)
@@ -82,7 +74,7 @@ void MapAsImageProvider::mapUpdate(const nav_msgs::msg::OccupancyGrid::SharedPtr
   currentMap.data = map->data;
 
   // resize cv image if it doesn't have the same dimensions as the map
-  if ((cv_img_full_.image.rows != map->info.height) || (cv_img_full_.image.cols != map->info.width))
+  if (((uint)cv_img_full_.image.rows != map->info.height) || ((uint)cv_img_full_.image.cols != map->info.width))
   {
     cv_img_full_.image = cv::Mat(map->info.height, map->info.width, CV_8U);
   }

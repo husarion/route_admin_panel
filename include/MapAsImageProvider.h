@@ -10,7 +10,6 @@
 #define INITIAL_MAP_SIZE_X 768
 #define INITIAL_MAP_SIZE_Y 768
 #define INITIAL_FULL_MAP_DELAY 1
-#define DEFAULT_MAP_SCALE 0.01
 
 class MapAsImageProvider : public rclcpp::Node
 {
@@ -28,9 +27,6 @@ private:
   rclcpp::Time* lastMapUpdate;
   rclcpp::Duration* fullMapDelay;
 
-  int spacing;
-  float map_scale;
-
   void mapUpdate(const nav_msgs::msg::OccupancyGrid::SharedPtr map);
 
   bool metadata;
@@ -39,7 +35,6 @@ public:
   MapAsImageProvider();
   ~MapAsImageProvider();
   void publishFullMap(bool force = false);
-  void setScale(float scale = DEFAULT_MAP_SCALE);
 };
 
 #endif
