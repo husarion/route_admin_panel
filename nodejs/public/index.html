@@ -48,10 +48,6 @@
                         data-target="#navbarSupportedContent">Upload custom map</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" onclick="showPathCreatorDialog()" data-toggle="collapse"
-                        data-target="#navbarSupportedContent">Create path</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link" onclick="showRouteManagerDialog()" data-toggle="collapse"
                         data-target="#navbarSupportedContent">Set route</a>
                 </li>
@@ -88,34 +84,6 @@
             </ul>
         </div>
     </nav>
-
-    <div id="pathCreatorDialog" class="modal">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">Path creator</h4>
-                </div>
-                <div class="modal-body">
-                    <h5 class="text-center">Stations</h5>
-
-                    <div>Loading:
-                        <select name="loading-station" id="loading-station">
-                        </select>
-                    </div>
-                    <div>Unloading:
-                        <select name="unloading-station" id="unloading-station">
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal"
-                        onclick="dismissPathCreatorDialog()">Cancel</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal" onclick="createPath()">Create
-                        path</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div id="routeManagerDialog" class="modal">
         <div class="modal-dialog">

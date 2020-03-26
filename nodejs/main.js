@@ -14,11 +14,8 @@ const uuidv1 = require('uuid/v1');
 const NavTargets = require('./nav_targets.js');
 const TfListener = require('./tf_listener.js');
 
-const std_msgs = rclnodejs.require('std_msgs').msg;
-const nav_msgs = rclnodejs.require('nav_msgs').msg;
 const nav2_msgs = rclnodejs.require('nav2_msgs').action;
 const geometry_msgs = rclnodejs.require('geometry_msgs').msg;
-const nav_msgs_service = rclnodejs.require('nav_msgs').srv;
 const RoutePlanner = require('./route_planner.js');
 
 var multer = require('multer');
@@ -52,10 +49,6 @@ var tfTree = new TfListener.TfTree();
 var robot_pose_emit_timestamp;
 
 var nav2_actionClient;
-
-var serviceClient;
-var plan_publisher;
-var current_plan;
 
 var routePlanner = new RoutePlanner.RoutePlanner();
 var route_active = false;
@@ -106,12 +99,6 @@ function load_config() {
             }
         }
     });
-}
-
-const default_publisher_options = {
-    queueSize: 1,
-    latching: false,
-    throttleMs: 100
 }
 
 function emit_map_update() {
@@ -220,13 +207,6 @@ function emit_route_status_update(label, sequence, seq_max) {
     io.emit('route_status', status);
 }
 
-function emit_current_path(path) {
-    let path_object = {
-        path: path
-    }
-    io.emit('current_plan', path_object);
-}
-
 function drive_to_target(navID) {
     let target = targets.get_target_by_id(navID);
     let action_goal = new nav2_msgs.NavigateToPose.Goal();
@@ -326,47 +306,6 @@ io.on('connection', function (socket) {
         route_active = false;
     });
 
-    socket.on('make_plan', function (points) {
-        let startTarget = targets.get_target_by_id(Number(points.start));
-        let endTarget = targets.get_target_by_id(Number(points.end));
-
-        let start_point = new geometry_msgs.PoseStamped();
-        let start_quaternion = math3d.Quaternion.Euler(0, 0, startTarget.theta * 180 / Math.PI);
-        start_point.header.frame_id = "map";
-        start_point.header.stamp.secs = Date.now() / 1000;
-        start_point.pose.position.x = startTarget.x;
-        start_point.pose.position.y = startTarget.y;
-        start_point.pose.position.z = 0;
-        start_point.pose.orientation.x = start_quaternion.x;
-        start_point.pose.orientation.y = start_quaternion.y;
-        start_point.pose.orientation.z = start_quaternion.z;
-        start_point.pose.orientation.w = start_quaternion.w;
-
-        let end_point = new geometry_msgs.PoseStamped();
-        let end_quaternion = math3d.Quaternion.Euler(0, 0, endTarget.theta * 180 / Math.PI);
-        end_point.header.frame_id = "map";
-        end_point.header.stamp.secs = Date.now() / 1000;
-        end_point.pose.position.x = endTarget.x;
-        end_point.pose.position.y = endTarget.y;
-        end_point.pose.position.z = 0;
-        end_point.pose.orientation.x = end_quaternion.x;
-        end_point.pose.orientation.y = end_quaternion.y;
-        end_point.pose.orientation.z = end_quaternion.z;
-        end_point.pose.orientation.w = end_quaternion.w;
-
-        let req = new nav_msgs_service.GetPlan.Request();
-        req.start = start_point;
-        req.goal = end_point;
-
-        serviceClient.call(req)
-            .then((resp) => {
-                current_plan = resp.plan;
-                current_plan.header.frame_id = '/map';
-                plan_publisher.publish(current_plan);
-                emit_current_path(current_plan);
-            });
-    })
-
     let scale_range = {
         min: argv.map_scale_min,
         max: argv.map_scale_max
@@ -426,10 +365,6 @@ rclnodejs.init().then(() => {
             emit_map_update();
         }
     );
-
-    // serviceClient = nh.serviceClient('/move_base/make_plan', nav_msgs_service.GetPlan);
-
-    plan_publisher = rosNode.createPublisher(nav_msgs.Path, '/plan');
 
     nav2_actionClient = rosNode.createActionClient(
         'nav2_msgs/action/NavigateToPose',

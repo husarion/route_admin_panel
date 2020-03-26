@@ -36,11 +36,8 @@ var map_scale;
 var saveCurrentPosDialog;
 var uploadCustomMapDialog;
 var uploadMapProgressBar;
-var pathCreatorDialog
 var routeManagerDialog;
 var routeStatusLabel;
-var loading_dropdown;
-var unloading_dropdown;
 var currentPath;
 var currentPosesArray;
 
@@ -145,7 +142,6 @@ $(document).keydown(function (e) {
 
 function dismissAllDialogs() {
     dismissCurrentPosDialog();
-    dismissPathCreatorDialog();
     dismissRouteManagerDialog();
     dismissUploadCustomMapDialog();
     cancelNewTarget();
@@ -183,29 +179,6 @@ function showRouteManagerDialog() {
     routeManagerDialog.style.display = "block";
 }
 
-function showPathCreatorDialog() {
-    dismissAllDialogs();
-    while (loading_dropdown.firstChild) {
-        loading_dropdown.removeChild(loading_dropdown.firstChild);
-    }
-
-    while (unloading_dropdown.firstChild) {
-        unloading_dropdown.removeChild(unloading_dropdown.firstChild);
-    }
-
-    targets_array.forEach(target => {
-        var opt_l = document.createElement('option');
-        var opt_u = document.createElement('option');
-        opt_l.appendChild(document.createTextNode(target.label));
-        opt_u.appendChild(document.createTextNode(target.label));
-        opt_l.value = target.id;
-        opt_u.value = target.id;
-        loading_dropdown.appendChild(opt_l);
-        unloading_dropdown.appendChild(opt_u);
-    });
-    pathCreatorDialog.style.display = "block";
-}
-
 function dismissRouteManagerDialog() {
     routeManagerDialog.style.display = "none";
 }
@@ -213,19 +186,6 @@ function dismissRouteManagerDialog() {
 function dismissUploadCustomMapDialog() {
     uploadCustomMapDialog.style.display = "none";
     uploadMapProgressBar.style.display = "none";
-}
-
-function dismissPathCreatorDialog() {
-    pathCreatorDialog.style.display = "none";
-}
-
-function createPath() {
-    let plan_request = {
-        start: loading_dropdown.value,
-        end: unloading_dropdown.value
-    };
-    socket.emit('make_plan', plan_request);
-    dismissPathCreatorDialog();
 }
 
 function uploadCustomMapConfirm() {
@@ -289,8 +249,6 @@ window.onclick = function (event) {
     } else if (event.target == uploadCustomMapDialog) {
         dismissAllDialogs();
     } else if (event.target == routeManagerDialog) {
-        dismissAllDialogs();
-    } else if (event.target == pathCreatorDialog) {
         dismissAllDialogs();
     }
 }
@@ -623,9 +581,6 @@ window.onload = function () {
     targets_table = document.getElementById('targets').getElementsByTagName('tbody')[0];
     routeStatusLabel = document.getElementById('route-status');
 
-    loading_dropdown = document.getElementById('loading-station');
-    unloading_dropdown = document.getElementById('unloading-station');
-
     currentPath = new Konva.Line({
         x: 0,
         y: 0,
@@ -744,7 +699,6 @@ window.onload = function () {
     uploadCustomMapDialog = document.getElementById("uploadCustomMapDialog");
     uploadMapProgressBar = document.getElementById("mapUploadProgress");
     routeManagerDialog = document.getElementById("routeManagerDialog");
-    pathCreatorDialog = document.getElementById("pathCreatorDialog");
 
     stageDiv.addEventListener("wheel", mapResizeCallback);
 
