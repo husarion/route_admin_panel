@@ -104,6 +104,45 @@ You should see interface like below:
 
 ![RouteAdminPanelScreenshot](images/route-admin-panel.png)
 
+## ROS API
+
+Below are ROS interfaces used by the route admin panel:
+
+### Topics
+
+| Topic | Message type | Direction |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+| --- | --- | --- | --- |
+| `/tf` | `tf2_msgs/TFMessage` | subscriber | Transform from `map` to `base_link` frame. |
+| `/map_image/full/compressed` | `sensor_msgs/CompressedImage` | subscriber | Map converted to grayscale image and compressed in PNG format. |
+| `/map_metadata` | `nav_msgs/MapMetaData` | subscriber | Metadata for map. |
+| `/map_zoom` | `std_msgs/Int16` | publisher | Current value of map zoom. |
+| `/plan` | `nav_msgs/Path` | publisher | Currently analyzed path from `make_plan` service. |
+
+
+### Services
+
+| Service name | Service type | Role |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+| --- | --- | --- | --- |
+| `/move_base/make_plan` | `nav_msgs_service/GetPlan` | client | Get proposed path for given points without sending goal to navigation stack. |
+
+### Actions
+
+| Action name | Action type | Role |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+| --- | --- | --- | --- |
+| `/move_base` | `move_base_msgs/MoveBase` | client | Set destinations for navigation stack. |
+
+### Map to image conversion
+
+RAP is using additional node `map_to_img_node` for conversion from `nav_msgs/OccupancyGrid` to `sensor_msgs/CompressedImage` from [`husarion_ros` package](https://github.com/husarion/husarion_ros). The `map_to_img_node` subscribes map as `nav_msgs/OccupancyGrid`  and publishes it as grayscale image with full resolution or cropped dependeing on current map zoom.
+
+| Topic | Message type | Direction |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+| --- | --- | --- | --- |
+| `/map` | `nav_msgs/OccupancyGrid` | subscriber | Map source |
+| `/map_zoom` | `std_msgs/Int16` | subscriber | Current value of map zoom. |
+| `/map_metadata` | `nav_msgs/MapMetaData` | publisher | Metadata for map. |
+| `/map_image/full` | `sensor_msgs/Image` | publisher | Map converted to grayscale image. |
+| `/map_image/tile` | `sensor_msgs/Image` | publisher | Map cropped according to zoom and converted to grayscale image. |
+
 ## Using panel from any network
 
 In case you would like to manage robot destinations outside of local network, you could use [Husarnet](https://husarnet.com/) for secure connection with your robot.
