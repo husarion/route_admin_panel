@@ -116,7 +116,7 @@ Below are ROS interfaces used by the route admin panel:
 ### Actions
 
 | Action name | Action type | Role |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
-| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | `NavigateToPose` | `nav2_msgs/action/NavigateToPose` | client | Set destinations for navigation stack. |
 
 ### Map to image conversion
