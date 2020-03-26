@@ -38,11 +38,19 @@ cd ~/ros_workspace/src
 git clone -b ros2 --single-branch https://github.com/husarion/route_admin_panel.git
 ```
 
-Install dependencies:
+Build workspace:
+
+```bash
+cd ~/ros_workspace
+colcon build
+. ~/ros_workspace/install/setup.sh
+```
+
+Install nodejs packages:
 
 ```bash 
-cd ~/ros_workspace/src/route_admin_panel/nodejs
-npm install express socket.io quaternion-to-euler math3d multer yargs
+cd ~/ros_workspace/install/route_admin_panel/share/route_admin_panel/nodejs
+npm install express socket.io quaternion-to-euler math3d multer yargs uuid
 wget https://forked-rclnodejs.s3-eu-west-1.amazonaws.com/rclnodejs-0.10.3.tgz
 npm install rclnodejs-0.10.3.tgz
 npm install
@@ -50,35 +58,34 @@ mkdir user_maps
 echo '{"targetList": {"targets": []}}' > user_maps/config.json
 ```
 
-Build workspace:
-
-```bash
-cd ~/ros_workspace
-colcon build --symlink-install
-. ~/ros_workspace/install/setup.sh
-```
 
 ## How to use
 
-Panel comes with prepared launch files for `move_base`, `gmapping`, `node.js` server and all other required components.
+Panel comes with prepared launch files for standalone panel or to run it with ROSbot, both contain all components required to run panel.
 Depending on your ROSbot version, you can start it with:
+
+- standalone panel
+
+    ```bash
+    ros2 launch route_admin_panel panel.launch.py
+    ```
 
 - for ROSbot 2.0:
 
     ```bash
-    roslaunch route_admin_panel demo_rosbot.launch
+    ros2 launch route_admin_panel panel_rosbot.launch.py
     ```
 
 - for ROSbot 2.0 PRO:
 
     ```bash
-    roslaunch route_admin_panel demo_rosbot_pro.launch
+    ros2 launch route_admin_panel panel_rosbot_pro.launch.py
     ```
 
 - for Gazebo simulator:
 
     ```bash
-    roslaunch route_admin_panel demo_gazebo.launch
+    ros2 launch route_admin_panel panel_sim.launch.py
     ```
 
 Once all nodes are running, go to web browser and type in address bar:
@@ -92,6 +99,46 @@ You should see interface like below:
 
 ![RouteAdminPanelScreenshot](images/route-admin-panel.png)
 
+
+# ROS API
+
+Below are ROS interfaces used by the route admin panel:
+
+### Topics
+
+| Topic | Message type | Direction |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+| --- | --- | --- | --- |
+| `/tf` | `tf2_msgs/msg/TFMessage` | subscriber | Transform from `map` to `base_link` frame |
+| `/map_image/full/compressed` | `sensor_msgs/msg/CompressedImage` | subscriber | Map converted to grayscale image and compressed in PNG format |
+| `/map_metadata` | `nav_msgs/msg/MapMetaData` | subscriber | Metadata for map |
+
+
+### Actions
+
+| Action name | Action type | Role |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+| --- | --- | --- | --- | --- |
+| `NavigateToPose` | `nav2_msgs/action/NavigateToPose` | client | Set destinations for navigation stack. |
+
+### Map to image conversion
+
+Additional node `map_to_img_node` for conversion from `nav_msgs/msg/OccupancyGrid` to `sensor_msgs/msg/CompressedImage` has interfaces:
+
+| Topic | Message type | Direction |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+| --- | --- | --- | --- |
+| `/map` | `nav_msgs/msg/OccupancyGrid` | subscriber | Map source |
+| `/map_metadata` | `nav_msgs/msg/MapMetaData` | publisher | Metadata for map |
+| `/map_image/full` | `sensor_msgs/msg/Image` | publisher | Map converted to grayscale image |
+
+Node is using `image_transport::ImageTransport` plugin to provide compressed images. RAP accepts only PNG compressed image, thus parameters for this image transport must be as follows:
+
+```
+map_to_img_node:
+    ros__parameters:
+        publish_map_metadata: true
+        format: png
+```
+
+ 
 ## Using panel from any network
 
 In case you would like to manage robot destinations outside of local network, you could use [Husarnet](https://husarnet.com/) for secure connection with your robot.
