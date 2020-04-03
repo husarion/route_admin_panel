@@ -61,14 +61,38 @@ echo '{"targetList": {"targets": []}}' > user_maps/config.json
 
 ## How to use
 
-Panel comes with prepared launch files for standalone panel or to run it with ROSbot, both contain all components required to run panel.
-Depending on your ROSbot version, you can start it with:
+Panel comes with prepared launch files for running it on ROSbot, in simulation environment or as a standalone panel.
 
-- standalone panel
+### Launching the panel on ROSbot
 
-    ```bash
-    ros2 launch route_admin_panel panel.launch.py
+Prior to launching the panel, it is required to establish communication with CORE2 board:
+
+- for ROSbot 2.0:
     ```
+    sudo MicroXRCEAgent serial --dev /dev/ttyS1 -b 500000
+    ```
+
+- for ROSbot 2.0 PRO:
+    ```
+    sudo MicroXRCEAgent serial --dev /dev/ttyS4 -b 460800
+    ```
+
+Enable communication between FastRTPS on IPv4 and CycloneDDS on IPv6:
+
+```
+ros2 run dds_bridge dds_bridge
+```
+
+To find out more regarding the interoperability issue, refer to [`dds_bridge` documentation](https://github.com/husarion/dds_bridge#dds-bridge)
+
+By default CORE is measuring time since reset, thus timestapms are published the same.
+If you want to use system time, use `rosbot_time_publisher` node:
+
+```
+RMW_IMPLEMENTATION=rmw_fastrtps_cpp ros2 run dds_bridge rosbot_time_publisher
+```
+
+Last step is to launch the panel application:
 
 - for ROSbot 2.0:
 
@@ -82,11 +106,19 @@ Depending on your ROSbot version, you can start it with:
     ros2 launch route_admin_panel panel_rosbot_pro.launch.py
     ```
 
-- for Gazebo simulator:
+### Launching the standalone panel
 
-    ```bash
-    ros2 launch route_admin_panel panel_sim.launch.py
-    ```
+Standalone panel does not require any additional steps:
+
+```bash
+ros2 launch route_admin_panel panel.launch.py
+```
+
+### Launching the panel with Gazebo simulator
+
+```bash
+ros2 launch route_admin_panel panel_sim.launch.py
+```
 
 Once all nodes are running, go to web browser and type in address bar:
 
