@@ -44,8 +44,8 @@
                         data-target="#navbarSupportedContent">Save current position</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" onclick="showUploadCustomMapDialog()" data-toggle="collapse"
-                        data-target="#navbarSupportedContent">Upload custom map</a>
+                    <a class="nav-link" onclick="showMapSettingsDialog()" data-toggle="collapse"
+                        data-target="#navbarSupportedContent">Map settings</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" onclick="showPathCreatorDialog()" data-toggle="collapse"
@@ -212,40 +212,81 @@
         </div>
     </div>
 
-    <div id="uploadCustomMapDialog" class="modal">
+    <div id="mapSettingsDialog" class="modal">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title">Map upload</h4>
+                    <h4 class="modal-title">Map settings</h4>
                 </div>
                 <div class="modal-body">
-                    <p>You can upload custom map for robot. Selected map must follow below rules:
-                        <ul>
-                            <li>Map is a grayscale image.</li>
-                            <li>White pixels determine free area.</li>
-                            <li>Black pixels determine obstacles.</li>
-                            <li>Gray pixels determine unknown area.</li>
-                        </ul>
-                    </p>
-                    <form method="post" action="/upload" enctype="multipart/form-data" id="map-upload-form"
-                        class="form-group">
-                        <div class="form-group">
-                            <label for="mapResolution">Resolution [meter/pixel]</label>
-                            <input type="number" step="0.01" min="0" name="mapResolution" id="mapResolution"
-                                placeholder="resolution" class="form-control">
+                    <div class="btn-group btn-group-toggle d-flex" data-toggle="buttons">
+                        <label class="btn btn-secondary active w-100" onClick="showMapSettingsTab()">
+                            <input type="radio" name="options" id="option1" checked>Settings
+                        </label>
+                        <label class="btn btn-secondary w-100" onClick="showMapUploadTab()">
+                            <input type="radio" name="options" id="option2">Upload custom map
+                        </label>
+                    </div>
+                    <div class="m-3">
+                        <div id="mapSettingsTab">
+                            <p>
+                                You can choose to load prevoiusly created or uploaded static map or to build new map
+                                in SLAM process.
+                            </p>
+                            <form>
+                                <div class="mx-2 my-1">Map type:</div>
+                                <label class="mx-2 my-0" onClick="enableMapFileDropdown()">
+                                    <input type="radio" name="mode" id="map_mode_static" value="map_mode_static">Static
+                                    map
+                                </label>
+                                <label class="mx-2 my-0" onClick="disableMapFileDropdown()">
+                                    <input type="radio" name="mode" id="map_mode_slam" value="map_mode_slam"
+                                        checked>SLAM
+                                    generated
+                                </label>
+                                <div class="mx-2 my-1">Map file: </div>
+                                <select name="loading-station" id="mapFileDropdown">
+                                    <option value="noselect">Choose file...</option>
+                                </select>
+                                <div class="mx-2 my-1">Auto save:</div>
+                                <label class="mx-2 my-0">
+                                    <input type="checkbox" id="mapAutoSaveCheckbox" checked>Enable
+                                </label>
+                            </form>
                         </div>
-                        <div class="form-group">
-                            <label for="map-image">Map file</label>
-                            <input type="file" class="form-control-file" name="map-image" id="map-image">
+                        <div id="mapUploadTab">
+                            <p>You can upload custom map for robot. Selected map must follow below rules:
+                                <ul>
+                                    <li>Map is a grayscale image.</li>
+                                    <li>White pixels determine free area.</li>
+                                    <li>Black pixels determine obstacles.</li>
+                                    <li>Gray pixels determine unknown area.</li>
+                                </ul>
+                            </p>
+                            <form method="post" action="/upload" enctype="multipart/form-data" id="map-upload-form"
+                                class="form-group">
+                                <div class="form-group">
+                                    <label for="mapResolution">Resolution [meter/pixel]</label>
+                                    <input type="number" step="0.01" min="0" name="mapResolution" id="mapResolution"
+                                        placeholder="resolution" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="map-image">Map file</label>
+                                    <input type="file" class="form-control-file" name="map-image" id="map-image">
+                                </div>
+                            </form>
+                            <progress class="progress-bar bg-success" id="mapUploadProgress"></progress>
+                            <button type="button" class="btn btn-default w-100"
+                                onclick="uploadCustomMapConfirm()">Upload
+                                map</button>
                         </div>
-                    </form>
-                    <progress class="progress-bar bg-success" id="mapUploadProgress"></progress>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal"
-                        onclick="dismissUploadCustomMapDialog()">Cancel</button>
+                        onclick="dismissMapSettingsDialog()">Cancel</button>
                     <button type="button" class="btn btn-default" data-dismiss="modal"
-                        onclick="uploadCustomMapConfirm()">Upload map</button>
+                        onclick="saveMapSettings()">Save</button>
                 </div>
             </div>
         </div>

@@ -34,7 +34,13 @@ var natural_map_size;
 var map_image_element;
 var map_scale;
 var saveCurrentPosDialog;
-var uploadCustomMapDialog;
+var mapSettingsDialog;
+var mapSettingsTab;
+var mapUploadTab;
+var mapFileDropdown;
+var mapModeRadioStatic;
+var mapModeRadioSLAM;
+var mapAutoSaveCheckbox;
 var uploadMapProgressBar;
 var pathCreatorDialog
 var routeManagerDialog;
@@ -147,7 +153,7 @@ function dismissAllDialogs() {
     dismissCurrentPosDialog();
     dismissPathCreatorDialog();
     dismissRouteManagerDialog();
-    dismissUploadCustomMapDialog();
+    dismissMapSettingsDialog();
     cancelNewTarget();
 }
 
@@ -159,9 +165,55 @@ function addTargetDialog() {
     document.getElementById('konva-container').addEventListener('mousedown', initNewTargetArrow);
 }
 
-function showUploadCustomMapDialog() {
+function showMapSettingsDialog() {
     dismissAllDialogs();
-    uploadCustomMapDialog.style.display = "block";
+    showMapSettingsTab();
+    mapSettingsDialog.style.display = "block";
+    if (mapModeRadioStatic.checked) {
+        enableMapFileDropdown();
+    } else {
+        disableMapFileDropdown();
+    }
+}
+
+function saveMapSettings() {
+    dismissMapSettingsDialog();
+    let map_settings = {
+        map_static: mapModeRadioStatic.checked,
+        map_slam: mapModeRadioSLAM.checked,
+        map_file: mapFileDropdown.value,
+        map_autosave: mapAutoSaveCheckbox.checked
+    };
+    console.log(map_settings);
+    socket.emit('save_map_settings', map_settings);
+}
+
+function showMapSettingsTab() {
+    mapSettingsTab.style.display = "block";
+    mapUploadTab.style.display = "none";
+}
+
+function showMapUploadTab() {
+    mapSettingsTab.style.display = "none";
+    mapUploadTab.style.display = "block";
+}
+
+function enableMapFileDropdown() {
+    mapFileDropdown.disabled = false;
+    disableAutoSaveCheckbox();
+}
+
+function disableMapFileDropdown() {
+    mapFileDropdown.disabled = true;
+    enableAutoSaveCheckbox();
+}
+
+function enableAutoSaveCheckbox() {
+    mapAutoSaveCheckbox.disabled = false;
+}
+
+function disableAutoSaveCheckbox() {
+    mapAutoSaveCheckbox.disabled = true;
 }
 
 function showRouteManagerDialog() {
@@ -210,8 +262,8 @@ function dismissRouteManagerDialog() {
     routeManagerDialog.style.display = "none";
 }
 
-function dismissUploadCustomMapDialog() {
-    uploadCustomMapDialog.style.display = "none";
+function dismissMapSettingsDialog() {
+    mapSettingsDialog.style.display = "none";
     uploadMapProgressBar.style.display = "none";
 }
 
@@ -229,10 +281,11 @@ function createPath() {
 }
 
 function uploadCustomMapConfirm() {
+    form = document.getElementById("map-upload-form");
     $.ajax({
         url: 'upload',
         type: 'POST',
-        data: new FormData($('form')[0]),
+        data: new FormData(form),
         cache: false,
         contentType: false,
         processData: false,
@@ -249,7 +302,7 @@ function uploadCustomMapConfirm() {
                     }
                 }, false);
                 myXhr.upload.addEventListener('loadend', function (e) {
-                    dismissUploadCustomMapDialog();
+                    uploadMapProgressBar.style.display = "none";
                 }, false);
             }
             return myXhr;
@@ -286,7 +339,7 @@ function saveCurrentPosition(x, y, theta) {
 window.onclick = function (event) {
     if (event.target == saveCurrentPosDialog) {
         dismissAllDialogs();
-    } else if (event.target == uploadCustomMapDialog) {
+    } else if (event.target == mapSettingsDialog) {
         dismissAllDialogs();
     } else if (event.target == routeManagerDialog) {
         dismissAllDialogs();
@@ -741,8 +794,14 @@ window.onload = function () {
     });
 
     saveCurrentPosDialog = document.getElementById("saveCurrentPosDialog");
-    uploadCustomMapDialog = document.getElementById("uploadCustomMapDialog");
+    mapSettingsDialog = document.getElementById("mapSettingsDialog");
     uploadMapProgressBar = document.getElementById("mapUploadProgress");
+    mapSettingsTab = document.getElementById("mapSettingsTab");
+    mapUploadTab = document.getElementById("mapUploadTab");
+    mapFileDropdown = document.getElementById("mapFileDropdown");
+    mapModeRadioStatic = document.getElementById("map_mode_static");
+    mapModeRadioSLAM = document.getElementById("map_mode_slam");
+    mapAutoSaveCheckbox = document.getElementById("mapAutoSaveCheckbox");
     routeManagerDialog = document.getElementById("routeManagerDialog");
     pathCreatorDialog = document.getElementById("pathCreatorDialog");
 
