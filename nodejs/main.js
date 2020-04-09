@@ -9,6 +9,7 @@ var quaternionToEuler = require('quaternion-to-euler');
 var math3d = require('math3d');
 const fs = require('fs');
 const yargs = require('yargs');
+var path = require('path');
 
 const NavTargets = require('./nav_targets.js');
 const TfListener = require('./tf_listener.js');
@@ -48,6 +49,8 @@ var map_metadata;
 
 var map_server_process;
 var custom_map_file;
+var selected_map_mode;
+var map_autosave;
 var configFileName = './user_maps/config.json';
 
 var tfTree = new TfListener.TfTree();
@@ -84,7 +87,9 @@ console.log("Map scale: [", argv.map_scale_min, ", ", argv.map_scale_max, "]")
 
 function save_config() {
     let confObject = {
+        mapMode: selected_map_mode,
         customMapFile: custom_map_file,
+        autosaveEnable: map_autosave,
         targetList: targets
     }
     let jsonString = JSON.stringify(confObject);
@@ -173,7 +178,7 @@ app.get('/', function (req, res) {
 app.use(express.static('public'))
 
 app.post('/upload', upload.single('map-image'), function (req, res) {
-    custom_map_file = "./user_maps/user_map.yaml";
+    custom_map_file = './user_maps/' + req.file.originalname + '.yaml';
     let imagePath = req.file.path.replace(/^user_maps\//, '');
     let yaml_ouptut = 'image: ' + imagePath + '\n';
     yaml_ouptut += 'resolution: ' + req.body.mapResolution + '\n';
@@ -186,10 +191,51 @@ app.post('/upload', upload.single('map-image'), function (req, res) {
             return console.log(err);
         }
     });
-    save_config();
-    startMapServer(custom_map_file);
+    update_map_filenames();
     res.end();
 });
+
+function save_map_settings(settings) {
+    console.log("Received map settings");
+    console.log(settings);
+    if (settings.map_static == true) {
+        selected_map_mode = 'STATIC';
+    } else if (settings.map_slam == true) {
+        selected_map_mode = 'SLAM';
+    }
+    custom_map_file = settings.map_file;
+    map_autosave = settings.map_autosave;
+    save_config();
+    // startMapServer(settings.map_file);
+}
+
+function update_map_filenames() {
+    let filenames = getFileList('./user_maps', '.yaml');
+    io.emit('map_file_list', filenames);
+}
+
+function getFileList(startPath, filter) {
+
+    console.log('Starting from dir ' + startPath + '/');
+
+    if (!fs.existsSync(startPath)) {
+        console.log("no dir ", startPath);
+        return;
+    }
+    let file_names = [];
+    var files = fs.readdirSync(startPath);
+    for (var i = 0; i < files.length; i++) {
+        var filename = path.join(startPath, files[i]);
+        var stat = fs.lstatSync(filename);
+        if (stat.isDirectory()) {
+            getFileList(filename, filter); //recurse
+        }
+        else if (filename.indexOf(filter) >= 0) {
+            file_names.push(filename.substring(10, filename.length - 5));
+        };
+    };
+    return file_names;
+};
 
 function emit_target(target) {
     io.emit('add_target', target);
@@ -371,6 +417,8 @@ io.on('connection', function (socket) {
             });
     })
 
+    socket.on('save_map_settings', save_map_settings);
+
     let scale_range = {
         min: argv.map_scale_min,
         max: argv.map_scale_max
@@ -383,6 +431,7 @@ io.on('connection', function (socket) {
     }
 
     emit_map_update();
+    update_map_filenames();
 });
 
 load_config();

@@ -216,6 +216,20 @@ function disableAutoSaveCheckbox() {
     mapAutoSaveCheckbox.disabled = true;
 }
 
+function updateMapFilenames(filenames) {
+    while (mapFileDropdown.length > 0) {
+        mapFileDropdown.removeChild(mapFileDropdown[0]);
+    }
+    filenames.forEach(name => add_map_option(name));
+}
+
+function add_map_option(filename) {
+    let option = document.createElement("OPTION");
+    option.value = filename;
+    option.text = filename;
+    mapFileDropdown.add(option);
+}
+
 function showRouteManagerDialog() {
     dismissAllDialogs();
     let existing_poses_table = document.getElementById('existing_poses').getElementsByTagName('tbody')[0];
@@ -793,6 +807,7 @@ window.onload = function () {
         document.getElementById("map-zoom").max = scale_range.max;
     });
 
+    socket.on('map_file_list', updateMapFilenames);
     saveCurrentPosDialog = document.getElementById("saveCurrentPosDialog");
     mapSettingsDialog = document.getElementById("mapSettingsDialog");
     uploadMapProgressBar = document.getElementById("mapUploadProgress");
