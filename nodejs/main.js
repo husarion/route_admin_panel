@@ -48,9 +48,13 @@ var map_data_blob;
 var map_metadata;
 
 var map_server_process;
+var amcl_process;
+var gmapping_process;
+var autosave_interval;
 var custom_map_file;
 var selected_map_mode;
 var map_autosave;
+var configDirectory = './user_maps';
 var configFileName = './user_maps/config.json';
 
 var tfTree = new TfListener.TfTree();
@@ -98,21 +102,45 @@ function save_config() {
             console.log(err);
         }
     });
+    load_config();
 }
 
 function load_config() {
-    fs.readFile(configFileName, 'utf8', function (err, data) {
-        if (err) {
-            console.log(err);
-        } else {
-            let confObject = JSON.parse(data);
-            targets.targets = confObject.targetList.targets;
-            if (confObject.customMapFile) {
-                custom_map_file = confObject.customMapFile;
-                startMapServer(custom_map_file);
+    if (fs.existsSync(configFileName)) {
+        fs.readFile(configFileName, 'utf8', function (err, data) {
+            if (err) {
+                console.log(err);
+            } else {
+                let confObject = JSON.parse(data);
+                targets.targets = confObject.targetList.targets;
+                if (confObject.mapMode == 'SLAM') {
+                    stopAMCL();
+                    stopMapServer();
+                    console.log("Start SLAM process");
+                    startGmapping();
+                    if (confObject.autosaveEnable == true) {
+                        console.log("Start map autosave process");
+                        startAutoSave();
+                    }
+                } else if (confObject.mapMode == "STATIC") {
+                    stopGmapping();
+                    stopAutoSave();
+                    custom_map_file = confObject.customMapFile;
+                    startMapServer(custom_map_file);
+                    startAMCL();
+                }
             }
+        });
+    } else {
+        console.log("Config file does not exist, create default.");
+        if (!fs.existsSync(configDirectory)) {
+            fs.mkdirSync(configDirectory);
         }
-    });
+        selected_map_mode = 'SLAM';
+        custom_map_file = '';
+        map_autosave = true;
+        save_config();
+    }
 }
 
 const default_publisher_options = {
@@ -152,16 +180,20 @@ function emit_robot_pose() {
     }
 }
 
-function killMapServer() {
+function stopMapServer() {
     if (map_server_process) {
+        exec('rosnode kill static_map_server', (err, stdout, stderr) => {
+            if (err) {
+                console.log("Could not stop map server: " + err);
+            }
+        });
         map_server_process.kill();
     }
 }
 
 function startMapServer(map_file) {
-    killMapServer();
     console.log("start map server with: " + map_file);
-    map_server_process = exec('rosrun map_server map_server ' + map_file, (err, stdout, stderr) => {
+    map_server_process = exec('rosrun map_server map_server ' + configDirectory + '/' + map_file + ' __name:=static_map_server', (err, stdout, stderr) => {
         console.log("Subprocess finished");
         if (err) {
             console.log("Error: " + err);
@@ -170,6 +202,75 @@ function startMapServer(map_file) {
     });
     console.log("Subprocess started");
 }
+
+function stopAMCL() {
+    if (amcl_process) {
+        exec('rosnode kill amcl', (err, stdout, stderr) => {
+            if (err) {
+                console.log("Could not stop AMCL: " + err);
+            }
+        });
+        amcl_process.kill();
+    }
+}
+
+function startAMCL() {
+    console.log("Start AMCL");
+    amcl_process = exec('roslaunch route_admin_panel amcl.launch', (err, stdout, stderr) => {
+        console.log("AMCL finished");
+        if (err) {
+            console.log("Error: " + err);
+            return;
+        }
+    });
+    console.log("AMCL launched");
+}
+
+function stopGmapping() {
+    if (gmapping_process) {
+        exec('rosnode kill gmapping_node', (err, stdout, stderr) => {
+            if (err) {
+                console.log("Could not stop gmapping: " + err);
+            }
+        });
+        gmapping_process.kill();
+    }
+}
+
+function startGmapping() {
+    gmapping_process = exec('roslaunch route_admin_panel gmapping.launch', (err, stdout, stderr) => {
+        console.log("Gmapping finished");
+        if (err) {
+            console.log("Error: " + err);
+            return;
+        }
+    });
+    console.log("Gmapping launched");
+}
+
+function stopAutoSave() {
+    clearInterval(autosave_interval);
+}
+
+function startAutoSave() {
+    stopAutoSave();
+    let date_string = Date.now().toString();
+    console.log("Enable map auto save");
+    autosave_interval = setInterval(saveMap, 1000, 'auto_saved_map_' + date_string);
+}
+
+function saveMap(filename) {
+    console.log(`Saving map with name: ${filename}`);
+    exec('cd ' + configDirectory + ' && rosrun map_server map_saver -f ' + filename, (err, stdout, stderr) => {
+        if (err) {
+            console.log("Error: " + err);
+            return;
+        }
+        console.log("Map saved");
+        update_map_filenames();
+    });
+}
+
 
 app.get('/', function (req, res) {
     res.sendFile(__dirname + '/public/index.html');
@@ -203,10 +304,9 @@ function save_map_settings(settings) {
     } else if (settings.map_slam == true) {
         selected_map_mode = 'SLAM';
     }
-    custom_map_file = settings.map_file;
+    custom_map_file = settings.map_file + '.yaml';
     map_autosave = settings.map_autosave;
     save_config();
-    // startMapServer(settings.map_file);
 }
 
 function update_map_filenames() {
