@@ -155,6 +155,7 @@ function dismissAllDialogs() {
     dismissRouteManagerDialog();
     dismissMapSettingsDialog();
     cancelNewTarget();
+    cancelRobotPose();
 }
 
 
@@ -322,6 +323,92 @@ function uploadCustomMapConfirm() {
             return myXhr;
         }
     });
+}
+
+function setRobotPose() {
+    dismissAllDialogs();
+    newTargetLayer = new Konva.Layer();
+    stage.add(newTargetLayer);
+    document.getElementById('konva-container').addEventListener('mousedown', initRobotPoseArrow);
+}
+
+
+function cancelRobotPose() {
+    document.getElementById('konva-container').removeEventListener('mousedown', initRobotPoseArrow);
+    document.getElementById('konva-container').removeEventListener('mousemove', rotateRobotPoseArrow);
+    document.getElementById('konva-container').removeEventListener('mousedown', acceptRobotPose);
+    if (newTargetArrow) {
+        newTargetArrow.remove();
+    }
+    if (newTargetLayer) {
+        newTargetLayer.remove();
+    }
+    stage.draw();
+}
+
+function acceptRobotPose(event) {
+    document.getElementById('konva-container').removeEventListener('mousemove', rotateRobotPoseArrow);
+    document.getElementById('konva-container').removeEventListener('mousedown', acceptRobotPose);
+    let arrowTipX = event.clientX - newTargetArrow.attrs.x;
+    let arrowTipY = newTargetArrow.attrs.y - event.clientY;
+    let arrowAngle = Math.atan2(arrowTipY, arrowTipX);
+    newTargetArrow.remove();
+    newTargetLayer.remove();
+    stage.draw();
+    let targetX = (newTargetArrow.attrs.x - stage.width() / 2) * map_metadata.resolution / map_scale + robot_position.x;
+    let targetY = (-newTargetArrow.attrs.y + stage.height() / 2) * map_metadata.resolution / map_scale + robot_position.y;
+    updateRobotPose(targetX, targetY, arrowAngle);
+}
+
+function rotateRobotPoseArrow(event) {
+    let arrowTipX = event.clientX - newTargetArrow.attrs.x;
+    let arrowTipY = event.clientY - newTargetArrow.attrs.y;
+    let arrowBaseX = 0;
+    let arrowBaseY = 0;
+    newTargetArrow.attrs.points = [arrowBaseX, arrowBaseY, arrowTipX, arrowTipY];
+    stage.draw();
+}
+
+function initRobotPoseArrow(event) {
+    newTargetArrow = new Konva.Arrow({
+        x: event.clientX,
+        y: event.clientY,
+        points: [0, 0, 0, 0],
+        pointerLength: 20,
+        pointerWidth: 10,
+        fill: 'green',
+        stroke: 'green',
+        strokeWidth: 3
+    });
+    newTargetLayer.add(newTargetArrow);
+    document.getElementById('konva-container').removeEventListener('mousedown', initRobotPoseArrow);
+    document.getElementById('konva-container').addEventListener('mousemove', rotateRobotPoseArrow);
+    document.getElementById('konva-container').addEventListener('mousedown', acceptRobotPose);
+}
+
+function updateRobotPose(x, y, theta) {
+    dismissAllDialogs();
+    if (x) {
+        currentRobotPosition.x = x;
+    } else {
+        currentRobotPosition.x = robot_position.x;
+    }
+    if (y) {
+        currentRobotPosition.y = y;
+    } else {
+        currentRobotPosition.y = robot_position.y;
+    }
+    if (theta) {
+        currentRobotPosition.theta = theta;
+    } else {
+        currentRobotPosition.theta = robot_position.theta;
+    }
+    let robot_pose = {
+        robot_pos_x: currentRobotPosition.x,
+        robot_pos_y: currentRobotPosition.y,
+        robot_pos_theta: currentRobotPosition.theta
+    }
+    socket.emit('set_initialpose', robot_pose);
 }
 
 function saveCurrentPosition(x, y, theta) {

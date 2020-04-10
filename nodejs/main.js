@@ -40,7 +40,9 @@ var zoom_publisher;
 
 const zoom_msg = new std_msgs.Int16();
 const drive_msg = new geometry_msgs.Twist();
+const initial_pose_msg = new geometry_msgs.PoseWithCovarianceStamped();
 var cmd_vel_publisher;
+var initialpose_publisher;
 
 var targets = new NavTargets.TargetList();
 
@@ -178,6 +180,20 @@ function emit_robot_pose() {
             io.emit('robot_pose', pose_msg);
         }
     }
+}
+
+function setInitialPose(initial_pose) {
+    let target_quaternion = math3d.Quaternion.Euler(0, 0, initial_pose.robot_pos_theta * 180 / Math.PI);
+    initial_pose_msg.header.frame_id = "map";
+    initial_pose_msg.header.stamp = rosnodejs.Time.now();
+    initial_pose_msg.pose.pose.position.x = initial_pose.robot_pos_x;
+    initial_pose_msg.pose.pose.position.y = initial_pose.robot_pos_y;
+    initial_pose_msg.pose.pose.position.z = 0;
+    initial_pose_msg.pose.pose.orientation.x = target_quaternion.x;
+    initial_pose_msg.pose.pose.orientation.y = target_quaternion.y;
+    initial_pose_msg.pose.pose.orientation.z = target_quaternion.z;
+    initial_pose_msg.pose.pose.orientation.w = target_quaternion.w;
+    initialpose_publisher.publish(initial_pose_msg);
 }
 
 function stopMapServer() {
@@ -381,7 +397,7 @@ function drive_to_target(navID) {
     let set_point = new geometry_msgs.PoseStamped();
     let target_quaternion = math3d.Quaternion.Euler(0, 0, target.theta * 180 / Math.PI);
     set_point.header.frame_id = "map";
-    set_point.header.stamp.secs = Date.now() / 1000;
+    set_point.header.stamp = rosnodejs.Time.now();
     set_point.pose.position.x = target.x;
     set_point.pose.position.y = target.y;
     set_point.pose.orientation.x = target_quaternion.x;
@@ -530,6 +546,8 @@ io.on('connection', function (socket) {
         emit_route_point(i, routePlanner.goalList[i].getNavID(), routePlanner.goalList[i].getRouteID());
     }
 
+    socket.on('set_initialpose', setInitialPose);
+
     emit_map_update();
     update_map_filenames();
 });
@@ -591,6 +609,8 @@ rosnodejs.initNode('/rosnodejs')
         serviceClient = nh.serviceClient('/move_base/make_plan', nav_msgs_service.GetPlan);
 
         plan_publisher = rosNode.advertise('/plan', nav_msgs.Path, default_publisher_options);
+
+        initialpose_publisher = rosNode.advertise('/initialpose', geometry_msgs.PoseWithCovarianceStamped, default_publisher_options);
 
         moveBase_actionClient._acInterface.on('result', (data) => {
             console.log("Received move_base: result\n", data);
