@@ -37,7 +37,6 @@ var saveCurrentPosDialog;
 var uploadCustomMapDialog;
 var uploadMapProgressBar;
 var routeManagerDialog;
-var routeStatusLabel;
 var currentPath;
 var currentPosesArray;
 
@@ -579,7 +578,6 @@ window.onload = function () {
     map_scale = parseInt(mapZoomSlider.value, 10) / 100;
 
     targets_table = document.getElementById('targets').getElementsByTagName('tbody')[0];
-    routeStatusLabel = document.getElementById('route-status');
 
     currentPath = new Konva.Line({
         x: 0,
@@ -682,7 +680,6 @@ window.onload = function () {
 
     socket.on('route_status', function (status) {
         console.log('route_status\n', status)
-        routeStatusLabel.innerHTML = "Dest " + status.label + " [" + status.seq + "/" + status.max + "]";
     });
 
     socket.on('current_plan', function (plan_object) {
