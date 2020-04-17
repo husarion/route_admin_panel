@@ -10,13 +10,15 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
+    use_sim_time = launch.substitutions.LaunchConfiguration('use_sim_time', default='true')
     rap_package_dir = get_package_share_directory('route_admin_panel')
     rosbot_description = get_package_share_directory('rosbot_description')
 
     rap_server = launch_ros.actions.Node(
         package='route_admin_panel',
         node_executable='node_server.sh',
-        output='log'
+        output='log',
+        arguments=['-s', 'true', '--min', '100', '--max', '500']
     )
 
     map_to_img = launch_ros.actions.Node(
@@ -31,6 +33,11 @@ def generate_launch_description():
             os.path.join(rosbot_description, 'launch', 'rosbot_sim.launch.py'))
     )
 
+    rosbot_nav = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            os.path.join(rosbot_description, 'launch', 'rosbot_navigation_sim.launch.py'))
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument(
             name='use_sim_time',
@@ -39,6 +46,7 @@ def generate_launch_description():
         rap_server,
         map_to_img,
         rosbot_sim,
+        rosbot_nav,
     ])
 
 if __name__ == '__main__':

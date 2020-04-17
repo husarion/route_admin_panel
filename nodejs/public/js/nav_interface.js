@@ -34,7 +34,13 @@ var natural_map_size;
 var map_image_element;
 var map_scale;
 var saveCurrentPosDialog;
-var uploadCustomMapDialog;
+var mapSettingsDialog;
+var mapSettingsTab;
+var mapUploadTab;
+var mapFileDropdown;
+var mapModeRadioStatic;
+var mapModeRadioSLAM;
+var mapAutoSaveCheckbox;
 var uploadMapProgressBar;
 var routeManagerDialog;
 var currentPath;
@@ -142,8 +148,9 @@ $(document).keydown(function (e) {
 function dismissAllDialogs() {
     dismissCurrentPosDialog();
     dismissRouteManagerDialog();
-    dismissUploadCustomMapDialog();
+    dismissMapSettingsDialog();
     cancelNewTarget();
+    cancelRobotPose();
 }
 
 
@@ -154,9 +161,69 @@ function addTargetDialog() {
     document.getElementById('konva-container').addEventListener('mousedown', initNewTargetArrow);
 }
 
-function showUploadCustomMapDialog() {
+function showMapSettingsDialog() {
     dismissAllDialogs();
-    uploadCustomMapDialog.style.display = "block";
+    showMapSettingsTab();
+    mapSettingsDialog.style.display = "block";
+    if (mapModeRadioStatic.checked) {
+        enableMapFileDropdown();
+    } else {
+        disableMapFileDropdown();
+    }
+}
+
+function saveMapSettings() {
+    dismissMapSettingsDialog();
+    let map_settings = {
+        map_static: mapModeRadioStatic.checked,
+        map_slam: mapModeRadioSLAM.checked,
+        map_file: mapFileDropdown.value,
+        map_autosave: mapAutoSaveCheckbox.checked
+    };
+    console.log(map_settings);
+    socket.emit('save_map_settings', map_settings);
+}
+
+function showMapSettingsTab() {
+    mapSettingsTab.style.display = "block";
+    mapUploadTab.style.display = "none";
+}
+
+function showMapUploadTab() {
+    mapSettingsTab.style.display = "none";
+    mapUploadTab.style.display = "block";
+}
+
+function enableMapFileDropdown() {
+    mapFileDropdown.disabled = false;
+    disableAutoSaveCheckbox();
+}
+
+function disableMapFileDropdown() {
+    mapFileDropdown.disabled = true;
+    enableAutoSaveCheckbox();
+}
+
+function enableAutoSaveCheckbox() {
+    mapAutoSaveCheckbox.disabled = false;
+}
+
+function disableAutoSaveCheckbox() {
+    mapAutoSaveCheckbox.disabled = true;
+}
+
+function updateMapFilenames(filenames) {
+    while (mapFileDropdown.length > 0) {
+        mapFileDropdown.removeChild(mapFileDropdown[0]);
+    }
+    filenames.forEach(name => add_map_option(name));
+}
+
+function add_map_option(filename) {
+    let option = document.createElement("OPTION");
+    option.value = filename;
+    option.text = filename;
+    mapFileDropdown.add(option);
 }
 
 function showRouteManagerDialog() {
@@ -182,16 +249,17 @@ function dismissRouteManagerDialog() {
     routeManagerDialog.style.display = "none";
 }
 
-function dismissUploadCustomMapDialog() {
-    uploadCustomMapDialog.style.display = "none";
+function dismissMapSettingsDialog() {
+    mapSettingsDialog.style.display = "none";
     uploadMapProgressBar.style.display = "none";
 }
 
 function uploadCustomMapConfirm() {
+    form = document.getElementById("map-upload-form");
     $.ajax({
         url: 'upload',
         type: 'POST',
-        data: new FormData($('form')[0]),
+        data: new FormData(form),
         cache: false,
         contentType: false,
         processData: false,
@@ -208,12 +276,98 @@ function uploadCustomMapConfirm() {
                     }
                 }, false);
                 myXhr.upload.addEventListener('loadend', function (e) {
-                    dismissUploadCustomMapDialog();
+                    uploadMapProgressBar.style.display = "none";
                 }, false);
             }
             return myXhr;
         }
     });
+}
+
+function setRobotPose() {
+    dismissAllDialogs();
+    newTargetLayer = new Konva.Layer();
+    stage.add(newTargetLayer);
+    document.getElementById('konva-container').addEventListener('mousedown', initRobotPoseArrow);
+}
+
+
+function cancelRobotPose() {
+    document.getElementById('konva-container').removeEventListener('mousedown', initRobotPoseArrow);
+    document.getElementById('konva-container').removeEventListener('mousemove', rotateRobotPoseArrow);
+    document.getElementById('konva-container').removeEventListener('mousedown', acceptRobotPose);
+    if (newTargetArrow) {
+        newTargetArrow.remove();
+    }
+    if (newTargetLayer) {
+        newTargetLayer.remove();
+    }
+    stage.draw();
+}
+
+function acceptRobotPose(event) {
+    document.getElementById('konva-container').removeEventListener('mousemove', rotateRobotPoseArrow);
+    document.getElementById('konva-container').removeEventListener('mousedown', acceptRobotPose);
+    let arrowTipX = event.clientX - newTargetArrow.attrs.x;
+    let arrowTipY = newTargetArrow.attrs.y - event.clientY;
+    let arrowAngle = Math.atan2(arrowTipY, arrowTipX);
+    newTargetArrow.remove();
+    newTargetLayer.remove();
+    stage.draw();
+    let targetX = (newTargetArrow.attrs.x - stage.width() / 2) * map_metadata.resolution / map_scale + robot_position.x;
+    let targetY = (-newTargetArrow.attrs.y + stage.height() / 2) * map_metadata.resolution / map_scale + robot_position.y;
+    updateRobotPose(targetX, targetY, arrowAngle);
+}
+
+function rotateRobotPoseArrow(event) {
+    let arrowTipX = event.clientX - newTargetArrow.attrs.x;
+    let arrowTipY = event.clientY - newTargetArrow.attrs.y;
+    let arrowBaseX = 0;
+    let arrowBaseY = 0;
+    newTargetArrow.attrs.points = [arrowBaseX, arrowBaseY, arrowTipX, arrowTipY];
+    stage.draw();
+}
+
+function initRobotPoseArrow(event) {
+    newTargetArrow = new Konva.Arrow({
+        x: event.clientX,
+        y: event.clientY,
+        points: [0, 0, 0, 0],
+        pointerLength: 20,
+        pointerWidth: 10,
+        fill: 'green',
+        stroke: 'green',
+        strokeWidth: 3
+    });
+    newTargetLayer.add(newTargetArrow);
+    document.getElementById('konva-container').removeEventListener('mousedown', initRobotPoseArrow);
+    document.getElementById('konva-container').addEventListener('mousemove', rotateRobotPoseArrow);
+    document.getElementById('konva-container').addEventListener('mousedown', acceptRobotPose);
+}
+
+function updateRobotPose(x, y, theta) {
+    dismissAllDialogs();
+    if (x) {
+        currentRobotPosition.x = x;
+    } else {
+        currentRobotPosition.x = robot_position.x;
+    }
+    if (y) {
+        currentRobotPosition.y = y;
+    } else {
+        currentRobotPosition.y = robot_position.y;
+    }
+    if (theta) {
+        currentRobotPosition.theta = theta;
+    } else {
+        currentRobotPosition.theta = robot_position.theta;
+    }
+    let robot_pose = {
+        robot_pos_x: currentRobotPosition.x,
+        robot_pos_y: currentRobotPosition.y,
+        robot_pos_theta: currentRobotPosition.theta
+    }
+    socket.emit('set_initialpose', robot_pose);
 }
 
 function saveCurrentPosition(x, y, theta) {
@@ -245,7 +399,7 @@ function saveCurrentPosition(x, y, theta) {
 window.onclick = function (event) {
     if (event.target == saveCurrentPosDialog) {
         dismissAllDialogs();
-    } else if (event.target == uploadCustomMapDialog) {
+    } else if (event.target == mapSettingsDialog) {
         dismissAllDialogs();
     } else if (event.target == routeManagerDialog) {
         dismissAllDialogs();
@@ -692,9 +846,17 @@ window.onload = function () {
         document.getElementById("map-zoom").max = scale_range.max;
     });
 
+    socket.on('map_file_list', updateMapFilenames);
+    
     saveCurrentPosDialog = document.getElementById("saveCurrentPosDialog");
-    uploadCustomMapDialog = document.getElementById("uploadCustomMapDialog");
+    mapSettingsDialog = document.getElementById("mapSettingsDialog");
     uploadMapProgressBar = document.getElementById("mapUploadProgress");
+    mapSettingsTab = document.getElementById("mapSettingsTab");
+    mapUploadTab = document.getElementById("mapUploadTab");
+    mapFileDropdown = document.getElementById("mapFileDropdown");
+    mapModeRadioStatic = document.getElementById("map_mode_static");
+    mapModeRadioSLAM = document.getElementById("map_mode_slam");
+    mapAutoSaveCheckbox = document.getElementById("mapAutoSaveCheckbox");
     routeManagerDialog = document.getElementById("routeManagerDialog");
 
     stageDiv.addEventListener("wheel", mapResizeCallback);
