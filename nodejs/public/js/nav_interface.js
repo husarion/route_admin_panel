@@ -177,9 +177,11 @@ function saveMapSettings() {
     let map_settings = {
         map_static: mapModeRadioStatic.checked,
         map_slam: mapModeRadioSLAM.checked,
-        map_file: mapFileDropdown.value,
+        map_file_name: mapFileDropdown.options[mapFileDropdown.selectedIndex].text,
+        map_file_extension: mapFileDropdown.value,
         map_autosave: mapAutoSaveCheckbox.checked
     };
+    console.log(mapFileDropdown);
     console.log(map_settings);
     socket.emit('save_map_settings', map_settings);
 }
@@ -219,10 +221,10 @@ function updateMapFilenames(filenames) {
     filenames.forEach(name => add_map_option(name));
 }
 
-function add_map_option(filename) {
+function add_map_option(file) {
     let option = document.createElement("OPTION");
-    option.value = filename;
-    option.text = filename;
+    option.value = file.extension;
+    option.text = file.name;
     mapFileDropdown.add(option);
 }
 
@@ -847,7 +849,7 @@ window.onload = function () {
     });
 
     socket.on('map_file_list', updateMapFilenames);
-    
+
     saveCurrentPosDialog = document.getElementById("saveCurrentPosDialog");
     mapSettingsDialog = document.getElementById("mapSettingsDialog");
     uploadMapProgressBar = document.getElementById("mapUploadProgress");

@@ -24,7 +24,9 @@ var multer = require('multer');
 const { spawn } = require('child_process');
 const { execSync } = require('child_process');
 
-var configDirectory = process.cwd() + '/user_maps';
+var workingDirectory = process.cwd();
+var configDirectory = workingDirectory + '/config';
+var mapsDirectory = workingDirectory + '/user_maps'
 var configFileName = configDirectory + '/config.json';
 
 var slam_toolbox_install_path;
@@ -47,25 +49,51 @@ try {
     return
 }
 
+var map_server_install_path;
+try {
+    map_server_install_path = execSync('ros2 pkg prefix nav2_map_server').toString();
+    map_server_install_path = map_server_install_path.substring(0, map_server_install_path.length - 1);
+} catch (error) {
+    console.error(`Can not get map_server path. Is it installed?`);
+    console.error(`${error}`);
+    return
+}
+
+var amcl_install_path;
+try {
+    amcl_install_path = execSync('ros2 pkg prefix nav2_amcl').toString();
+    amcl_install_path = amcl_install_path.substring(0, amcl_install_path.length - 1);
+} catch (error) {
+    console.error(`Can not get amcl path. Is it installed?`);
+    console.error(`${error}`);
+    return
+}
 
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, configDirectory);
+        cb(null, mapsDirectory);
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + file.originalname);
+        cb(null, file.originalname);
     }
 });
 
 var upload = multer({ storage: storage });
 
 var initialpose_publisher;
+var initial_pose_msg = new geometry_msgs.PoseWithCovarianceStamped();
+var robot_initial_pose = {
+    robot_pos_x: 0,
+    robot_pos_y: 0,
+    robot_pos_theta: 0
+}
 
 var targets = new NavTargets.TargetList();
 
 var map_data_blob;
 var map_metadata;
 
+var map_server_process;
 var localization_process;
 var localization_flags = {
     enable: false,
@@ -79,10 +107,16 @@ var autosave_enabled;
 var autosave_active = false;
 var map_autosave;
 var subprocess_interval;
-var custom_map_file;
+var selected_map_file = {
+    name: '',
+    extension: ''
+};
 var selected_map_mode;
 var map_file_name;
 var serializePoseGraphClient;
+var changeMapServerStateClient;
+var changeAMCLStateClient;
+
 var rosNode;
 
 var tfTree = new TfListener.TfTree();
@@ -132,7 +166,8 @@ process.on('exit', (code) => {
 function save_config() {
     let confObject = {
         mapMode: selected_map_mode,
-        customMapFile: custom_map_file,
+        customMapFileName: selected_map_file.name,
+        customMapFileExt: selected_map_file.extension,
         autosaveEnable: map_autosave,
         targetList: targets
     }
@@ -160,7 +195,8 @@ function load_config() {
                 } else if (confObject.mapMode == "STATIC") {
                     slam_process_flag = false;
                     autosave_enabled = false;
-                    custom_map_file = confObject.customMapFile;
+                    selected_map_file.name = confObject.customMapFileName;
+                    selected_map_file.extension = confObject.customMapFileExt;
                     localization_flags.restart = true;
                     localization_flags.enable = true;
                 } else {
@@ -176,7 +212,8 @@ function load_config() {
             fs.mkdirSync(configDirectory);
         }
         selected_map_mode = 'SLAM';
-        custom_map_file = '';
+        selected_map_file.name = '';
+        selected_map_file.extension = '';
         map_autosave = true;
         save_config();
     }
@@ -213,6 +250,63 @@ function emit_robot_pose() {
     }
 }
 
+function setInitialPose(initial_pose) {
+    if (selected_map_file.extension == '.yaml') {
+        let target_quaternion = math3d.Quaternion.Euler(0, 0, initial_pose.robot_pos_theta * 180 / Math.PI);
+        initial_pose_msg.header.frame_id = "map";
+        initial_pose_msg.header.stamp.sec = '0';
+        initial_pose_msg.header.stamp.nanosec = '0';
+        initial_pose_msg.pose.pose.position.x = initial_pose.robot_pos_x;
+        initial_pose_msg.pose.pose.position.y = initial_pose.robot_pos_y;
+        initial_pose_msg.pose.pose.position.z = 0;
+        initial_pose_msg.pose.pose.orientation.x = target_quaternion.x;
+        initial_pose_msg.pose.pose.orientation.y = target_quaternion.y;
+        initial_pose_msg.pose.pose.orientation.z = target_quaternion.z;
+        initial_pose_msg.pose.pose.orientation.w = target_quaternion.w;
+        initialpose_publisher.publish(initial_pose_msg);
+    } else if (selected_map_file.extension == '.posegraph') {
+        robot_initial_pose.robot_pos_x = initial_pose.robot_pos_x;
+        robot_initial_pose.robot_pos_y = initial_pose.robot_pos_y;
+        robot_initial_pose.robot_pos_theta = initial_pose.robot_pos_theta;
+        localization_flags.restart = true;
+    }
+}
+
+function transition_activate(stateClient) {
+    let request = {
+        transition: {
+            id: 3, // TRANSITION_ACTIVATE
+            label: 'activate'
+        }
+    }
+    stateClient.sendRequest(request, response => {
+        if (response.success) {
+            console.log(stateClient._serviceName + " set to state ACTIVE");
+        } else {
+            console.log("Can not set " + stateClient._serviceName + " state: ACTIVE");
+            transition_activate(stateClient);
+        }
+    });
+}
+
+function transition_configure(stateClient) {
+    let request = {
+        transition: {
+            id: 1, // TRANSITION_CONFIGURE
+            label: 'configure'
+        }
+    }
+    stateClient.sendRequest(request, response => {
+        if (response.success) {
+            console.log(stateClient._serviceName + " set to state INACTIVE");
+            transition_activate(stateClient);
+        } else {
+            console.log("Can not set " + stateClient._serviceName + " state: INACTIVE");
+            transition_configure(stateClient);
+        }
+    });
+}
+
 function subprocessControl() {
     if (slam_process_flag == true && slam_process_exited == true) {
         startSLAM();
@@ -242,7 +336,7 @@ function subprocessControl() {
     } else if (autosave_active == false && autosave_enabled == true) {
         let date_time = new Date();
         let date_string = date_time.toISOString().replace('T', '_').substr(0, 16);
-        map_file_name = configDirectory + '/auto_saved_map_' + date_string;
+        map_file_name = mapsDirectory + '/auto_saved_map_' + date_string;
         autosave_active = true;
     }
 }
@@ -254,35 +348,109 @@ function stopLocalization() {
         localization_process.kill('SIGINT');
         localization_process.kill('SIGKILL');
     }
+
+    if (map_server_process) {
+        console.log("Stop map_server process.");
+        map_server_process.kill('SIGTERM');
+        map_server_process.kill('SIGINT');
+        map_server_process.kill('SIGKILL');
+    }
 }
 
 function startLocalization() {
-    if (fs.existsSync(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml')) {
-        fs.readFile(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml', 'utf8', function (err, data) {
-            if (err) {
-                console.log(err);
-            } else {
-                if (argv.sim_time) {
-                    data += '    use_sim_time: true\n';
+    if (selected_map_file.extension == '.posegraph') {
+        if (fs.existsSync(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml')) {
+            fs.readFile(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml', 'utf8', function (err, data) {
+                if (err) {
+                    console.log(err);
                 } else {
-                    data += '    use_sim_time: false\n';
-                }
-                data += '    map_file_name: ' + configDirectory + '/' + custom_map_file + '\n';
-                data += '    map_start_pose: [0.0, 0.0, 0.0]\n';
-                data += '    mode: localization\n';
-                fs.writeFile(configDirectory + '/params.yaml', data, function (err) {
-                    if (err) {
-                        console.log('Could not write slam toolbox configuration file')
-                        return console.log(err);
+                    if (argv.sim_time) {
+                        data += '    use_sim_time: true\n';
+                    } else {
+                        data += '    use_sim_time: false\n';
                     }
-                });
+                    data += '    map_file_name: ' + mapsDirectory + '/' + selected_map_file.name + '\n';
+                    data += '    map_start_pose: ['
+                        + robot_initial_pose.robot_pos_x.toFixed(3) + ', '
+                        + robot_initial_pose.robot_pos_y.toFixed(3) + ', '
+                        + robot_initial_pose.robot_pos_theta.toFixed(4) + ']\n';
+                    data += '    mode: localization\n';
+                    fs.writeFile(configDirectory + '/params.yaml', data, function (err) {
+                        if (err) {
+                            console.log('Could not write slam toolbox configuration file');
+                            return console.log(err);
+                        }
+                    });
+                }
+            });
+        } else {
+            console.log("Slam toolbox config file not found, can not start localization.");
+            return
+        }
+        localization_process = spawn(slam_toolbox_install_path + '/lib/slam_toolbox/localization_slam_toolbox_node', ['__params:=' + configDirectory + '/params.yaml']);
+    } else if (selected_map_file.extension == '.yaml') {
+        let map_server_params = 'map_server:\n';
+        map_server_params += '  ros__parameters:\n';
+        map_server_params += '    yaml_filename: ' + mapsDirectory + '/' + selected_map_file.name + selected_map_file.extension + '\n';
+        if (argv.sim_time) {
+            map_server_params += '    use_sim_time: true\n';
+        } else {
+            map_server_params += '    use_sim_time: false\n';
+        }
+        fs.writeFile(configDirectory + '/map_server_params.yaml', map_server_params, function (err) {
+            if (err) {
+                console.log('Could not write map server configuration file');
+                return console.log(err);
             }
         });
+        map_server_process = spawn(map_server_install_path + '/lib/nav2_map_server/map_server', ['__params:=' + configDirectory + '/map_server_params.yaml']);
+        // map_server_process.stdout.on('data', (data) => { console.log(`stdout: ${data}`); });
+        // map_server_process.stderr.on('data', (data) => { console.error(`stderr: ${data}`); });
+
+        let amcl_params = 'amcl:\n';
+        amcl_params += '  ros__parameters:\n';
+        amcl_params += '    odom_frame_id: odom\n';
+        amcl_params += '    odom_model_type: diff-corrected\n';
+        amcl_params += '    base_frame_id: base_link\n';
+        amcl_params += '    update_min_d: 0.1\n';
+        amcl_params += '    update_min_a: 0.2\n';
+        amcl_params += '    min_particles: 500\n';
+        if (argv.sim_time) {
+            amcl_params += '    use_sim_time: true\n';
+        } else {
+            amcl_params += '    use_sim_time: false\n';
+        }
+        fs.writeFile(configDirectory + '/params.yaml', amcl_params, function (err) {
+            if (err) {
+                console.log('Could not write amcl configuration file');
+                return console.log(err);
+            }
+        });
+        localization_process = spawn(amcl_install_path + '/lib/nav2_amcl/amcl', ['__params:=' + configDirectory + '/params.yaml']);
+
+        changeMapServerStateClient.waitForService(1000).then(result => {
+            if (!result) {
+                console.log('Error: /map_server/change_state: not available');
+                return;
+            }
+            transition_configure(changeMapServerStateClient);
+        });
+
+        changeAMCLStateClient.waitForService(1000).then(result => {
+            if (!result) {
+                console.log('Error: /amcl/change_state: not available');
+                return;
+            }
+            transition_configure(changeAMCLStateClient);
+            robot_initial_pose.robot_pos_x = 0;
+            robot_initial_pose.robot_pos_y = 0;
+            robot_initial_pose.robot_pos_theta = 0;
+            setTimeout(setInitialPose, 500, robot_initial_pose);
+        });
     } else {
-        console.log("Slam toolbox config file not found, can not start localization.");
-        return
+        console.log('Unsupported map file type');
+        return;
     }
-    localization_process = spawn(slam_toolbox_install_path + '/lib/slam_toolbox/localization_slam_toolbox_node', ['__params:=' + configDirectory + '/params.yaml']);
     // localization_process.stdout.on('data', (data) => { console.log(`stdout: ${data}`); });
     // localization_process.stderr.on('data', (data) => { console.error(`stderr: ${data}`); });
     localization_process.on('close', (code) => {
@@ -365,7 +533,25 @@ app.get('/', function (req, res) {
 app.use(express.static('public'))
 
 app.post('/upload', upload.single('map-image'), function (req, res) {
-    console.log("Map upload not implemented yet");
+    console.log("save yaml file fo rmap");
+    let uploaded_map_file = mapsDirectory + '/' + req.file.originalname + '.yaml';
+    let imagePath = req.file.path.replace(/^user_maps\//, '');
+    let yaml_ouptut = 'image: ' + imagePath + '\n';
+    yaml_ouptut += 'resolution: ' + req.body.mapResolution + '\n';
+    yaml_ouptut += 'origin: [0.0, 0.0, 0.0]\n';
+    yaml_ouptut += 'occupied_thresh: 0.65\n';
+    yaml_ouptut += 'free_thresh: 0.196\n';
+    yaml_ouptut += 'negate: 0\n';
+    console.log('yaml_output:');
+    console.log(yaml_ouptut);
+    console.log('uploaded_map_file');
+    console.log(uploaded_map_file);
+    fs.writeFile(uploaded_map_file, yaml_ouptut, function (err) {
+        if (err) {
+            return console.log(err);
+        }
+    });
+    update_map_filenames();
     res.end();
 });
 
@@ -377,17 +563,20 @@ function save_map_settings(settings) {
     } else if (settings.map_slam == true) {
         selected_map_mode = 'SLAM';
     }
-    custom_map_file = settings.map_file;
+    selected_map_file.name = settings.map_file_name;
+    selected_map_file.extension = settings.map_file_extension;
     map_autosave = settings.map_autosave;
     save_config();
 }
 
 function update_map_filenames() {
-    let filenames = getFileList(configDirectory, '.posegraph');
+    let posegraph_filenames = getFileList(mapsDirectory, '.posegraph');
+    let yaml_filenames = getFileList(mapsDirectory, '.yaml');
+    let filenames = posegraph_filenames.concat(yaml_filenames);
     io.emit('map_file_list', filenames);
 }
 
-function getFileList(startPath, filter) {
+function getFileList(startPath, extension) {
     if (!fs.existsSync(startPath)) {
         console.log("no dir ", startPath);
         return;
@@ -398,10 +587,13 @@ function getFileList(startPath, filter) {
         var filename = path.join(startPath, files[i]);
         var stat = fs.lstatSync(filename);
         if (stat.isDirectory()) {
-            getFileList(filename, filter); //recurse
+            getFileList(filename, extension); //recurse
         }
-        else if (filename.indexOf(filter) >= 0) {
-            file_names.push(files[i].substring(0, files[i].length - 10));
+        else if (filename.indexOf(extension) >= 0) {
+            file_names.push({
+                name: files[i].substring(0, files[i].length - extension.length),
+                extension: extension
+            });
         };
     };
     return file_names;
@@ -544,15 +736,19 @@ io.on('connection', function (socket) {
         emit_route_point(i, routePlanner.goalList[i].getNavID(), routePlanner.goalList[i].getRouteID());
     }
 
-    socket.on('set_initialpose', function () {
-        console.log('Setting initial pose for ROS2 is not implemented yet');
-    });
+    socket.on('set_initialpose', setInitialPose);
 
     emit_map_update();
     update_map_filenames();
 });
 
 http.listen(8000, function () {
+    if (!fs.existsSync(configDirectory)) {
+        fs.mkdirSync(configDirectory);
+    }
+    if (!fs.existsSync(mapsDirectory)) {
+        fs.mkdirSync(mapsDirectory);
+    }
     console.log('listening on *:8000');
 });
 
@@ -560,6 +756,7 @@ rclnodejs.init().then(() => {
     rosNode = rclnodejs.createNode('rap_server_node');
     robot_pose_emit_timestamp = Date.now();
 
+    initialpose_publisher = rosNode.createPublisher('geometry_msgs/msg/PoseWithCovarianceStamped', '/initialpose');
     rosNode.createSubscription('tf2_msgs/msg/TFMessage', '/tf',
         (data) => {
             data.transforms.forEach(transform_stamped => {
@@ -597,6 +794,9 @@ rclnodejs.init().then(() => {
     );
 
     serializePoseGraphClient = rosNode.createClient('slam_toolbox/srvs/SerializePoseGraph', '/serialize_map');
+
+    changeMapServerStateClient = rosNode.createClient('lifecycle_msgs/srv/ChangeState', '/map_server/change_state');
+    changeAMCLStateClient = rosNode.createClient('lifecycle_msgs/srv/ChangeState', '/amcl/change_state');
 
     nav2_actionClient = rosNode.createActionClient(
         'nav2_msgs/action/NavigateToPose',

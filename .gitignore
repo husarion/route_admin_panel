@@ -1,7 +1,8 @@
 .vscode
 node_modules
 user_images
-user_maps
+nodejs/user_maps
+nodejs/config
 module_sources
 rosnodejs*.tgz
 build
