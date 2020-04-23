@@ -17,6 +17,8 @@ const TfListener = require('./tf_listener.js');
 
 const nav2_msgs = rclnodejs.require('nav2_msgs').action;
 const geometry_msgs = rclnodejs.require('geometry_msgs').msg;
+const rosgraph_msgs = rclnodejs.require('rosgraph_msgs').msg;
+var clock_message = new rosgraph_msgs.Clock();
 const RoutePlanner = require('./route_planner.js');
 
 var multer = require('multer');
@@ -97,15 +99,16 @@ var map_server_process;
 var localization_process;
 var localization_flags = {
     enable: false,
-    active: false,
-    restart: false
+    loc_active: false,
+    map_active: false,
+    restart: false,
+    finalize: false
 };
 var slam_process;
 var slam_process_flag;
 var slam_process_exited = true;
 var autosave_enabled;
 var autosave_active = false;
-var map_autosave;
 var subprocess_interval;
 var selected_map_file = {
     name: '',
@@ -163,24 +166,26 @@ process.on('exit', (code) => {
     subprocessControl();
 });
 
-function save_config() {
+function save_config(force_restart) {
     let confObject = {
         mapMode: selected_map_mode,
         customMapFileName: selected_map_file.name,
         customMapFileExt: selected_map_file.extension,
-        autosaveEnable: map_autosave,
+        autosaveEnable: autosave_enabled,
         targetList: targets
     }
+    console.log("Save config:");
+    console.log(confObject);
     let jsonString = JSON.stringify(confObject);
     fs.writeFile(configFileName, jsonString, 'utf8', function (err) {
         if (err) {
             console.log(err);
         }
     });
-    load_config();
+    load_config(force_restart);
 }
 
-function load_config() {
+function load_config(force_restart) {
     if (fs.existsSync(configFileName)) {
         fs.readFile(configFileName, 'utf8', function (err, data) {
             if (err) {
@@ -189,15 +194,19 @@ function load_config() {
                 let confObject = JSON.parse(data);
                 targets.targets = confObject.targetList.targets;
                 if (confObject.mapMode == 'SLAM') {
+                    selected_map_mode = confObject.mapMode;
                     slam_process_flag = true;
                     localization_flags.enable = false;
                     autosave_enabled = confObject.autosaveEnable;
                 } else if (confObject.mapMode == "STATIC") {
+                    selected_map_mode = confObject.mapMode;
                     slam_process_flag = false;
                     autosave_enabled = false;
                     selected_map_file.name = confObject.customMapFileName;
                     selected_map_file.extension = confObject.customMapFileExt;
-                    localization_flags.restart = true;
+                    if (force_restart) {
+                        localization_flags.restart = true;
+                    }
                     localization_flags.enable = true;
                 } else {
                     slam_process_flag = false;
@@ -214,8 +223,8 @@ function load_config() {
         selected_map_mode = 'SLAM';
         selected_map_file.name = '';
         selected_map_file.extension = '';
-        map_autosave = true;
-        save_config();
+        autosave_enabled = true;
+        save_config(false);
     }
 }
 
@@ -254,8 +263,10 @@ function setInitialPose(initial_pose) {
     if (selected_map_file.extension == '.yaml') {
         let target_quaternion = math3d.Quaternion.Euler(0, 0, initial_pose.robot_pos_theta * 180 / Math.PI);
         initial_pose_msg.header.frame_id = "map";
-        initial_pose_msg.header.stamp.sec = '0';
-        initial_pose_msg.header.stamp.nanosec = '0';
+        if (argv.sim_time == true) {
+            initial_pose_msg.header.stamp.sec = clock_message.clock.sec - 1;
+            initial_pose_msg.header.stamp.nanosec = clock_message.clock.nanosec;
+        }
         initial_pose_msg.pose.pose.position.x = initial_pose.robot_pos_x;
         initial_pose_msg.pose.pose.position.y = initial_pose.robot_pos_y;
         initial_pose_msg.pose.pose.position.z = 0;
@@ -284,7 +295,7 @@ function transition_activate(stateClient) {
             console.log(stateClient._serviceName + " set to state ACTIVE");
         } else {
             console.log("Can not set " + stateClient._serviceName + " state: ACTIVE");
-            transition_activate(stateClient);
+            // setTimeout(transition_activate, 250, stateClient);
         }
     });
 }
@@ -302,7 +313,7 @@ function transition_configure(stateClient) {
             transition_activate(stateClient);
         } else {
             console.log("Can not set " + stateClient._serviceName + " state: INACTIVE");
-            transition_configure(stateClient);
+            // setTimeout(transition_configure, 250, stateClient);
         }
     });
 }
@@ -315,16 +326,18 @@ function subprocessControl() {
     }
 
     if (localization_flags.restart) {
-        if (localization_flags.active) {
+        if (localization_flags.loc_active || localization_flags.map_active) {
             stopLocalization();
         } else {
             console.log(`Set localization_flags.restart to [false]`);
             localization_flags.restart = false;
         }
+    } else if (localization_flags.finalize == true) {
+        console.log("Wait for finalization");
     } else {
-        if (localization_flags.enable == true && localization_flags.active == false) {
+        if (localization_flags.enable == true && (localization_flags.loc_active == false || localization_flags.map_active == false)) {
             startLocalization();
-        } else if (localization_flags.enable == false && localization_flags.active == true) {
+        } else if (localization_flags.enable == false && (localization_flags.loc_active == true || localization_flags.map_active == true)) {
             stopLocalization();
         }
     }
@@ -344,6 +357,7 @@ function subprocessControl() {
 function stopLocalization() {
     if (localization_process) {
         console.log("Stop localization process.");
+        localization_flags.finalize = true;
         localization_process.kill('SIGTERM');
         localization_process.kill('SIGINT');
         localization_process.kill('SIGKILL');
@@ -351,6 +365,7 @@ function stopLocalization() {
 
     if (map_server_process) {
         console.log("Stop map_server process.");
+        localization_flags.finalize = true;
         map_server_process.kill('SIGTERM');
         map_server_process.kill('SIGINT');
         map_server_process.kill('SIGKILL');
@@ -388,77 +403,96 @@ function startLocalization() {
             return
         }
         localization_process = spawn(slam_toolbox_install_path + '/lib/slam_toolbox/localization_slam_toolbox_node', ['__params:=' + configDirectory + '/params.yaml']);
+        // localization_process.stdout.on('data', (data) => { console.log(`stdout: ${data}`); });
+        // localization_process.stderr.on('data', (data) => { console.error(`stderr: ${data}`); });
+        localization_process.on('close', (code) => {
+            localization_flags.loc_active = false;
+            localization_flags.finalize = false;
+        });
+        localization_flags.loc_active = true;
     } else if (selected_map_file.extension == '.yaml') {
-        let map_server_params = 'map_server:\n';
-        map_server_params += '  ros__parameters:\n';
-        map_server_params += '    yaml_filename: ' + mapsDirectory + '/' + selected_map_file.name + selected_map_file.extension + '\n';
-        if (argv.sim_time) {
-            map_server_params += '    use_sim_time: true\n';
-        } else {
-            map_server_params += '    use_sim_time: false\n';
+        if (localization_flags.map_active == false) {
+            let map_server_params = 'map_server:\n';
+            map_server_params += '  ros__parameters:\n';
+            map_server_params += '    yaml_filename: ' + mapsDirectory + '/' + selected_map_file.name + selected_map_file.extension + '\n';
+            if (argv.sim_time) {
+                map_server_params += '    use_sim_time: true\n';
+            } else {
+                map_server_params += '    use_sim_time: false\n';
+            }
+            fs.writeFile(configDirectory + '/map_server_params.yaml', map_server_params, function (err) {
+                if (err) {
+                    console.log('Could not write map server configuration file');
+                    return console.log(err);
+                }
+            });
+            map_server_process = spawn(map_server_install_path + '/lib/nav2_map_server/map_server', ['__params:=' + configDirectory + '/map_server_params.yaml']);
+            map_server_process.stdout.on('data', (data) => { console.log(`[ map_server_process ] - stdout: ${data}`); });
+            map_server_process.stderr.on('data', (data) => { console.error(`[ map_server_process ] - stderr: ${data}`); });
+            map_server_process.on('close', (code) => {
+                localization_flags.map_active = false;
+                if (localization_flags.map_active == false && localization_flags.loc_active == false) {
+                    localization_flags.finalize = false;
+                }
+            });
+
+            changeMapServerStateClient.waitForService(1000).then(result => {
+                console.log("/map_server/change_state wait done");
+                if (!result) {
+                    console.log('Error: /map_server/change_state: not available');
+                    return;
+                }
+                setTimeout(transition_configure, 500, changeMapServerStateClient);
+                localization_flags.map_active = true;
+            });
         }
-        fs.writeFile(configDirectory + '/map_server_params.yaml', map_server_params, function (err) {
-            if (err) {
-                console.log('Could not write map server configuration file');
-                return console.log(err);
-            }
-        });
-        map_server_process = spawn(map_server_install_path + '/lib/nav2_map_server/map_server', ['__params:=' + configDirectory + '/map_server_params.yaml']);
-        // map_server_process.stdout.on('data', (data) => { console.log(`stdout: ${data}`); });
-        // map_server_process.stderr.on('data', (data) => { console.error(`stderr: ${data}`); });
 
-        let amcl_params = 'amcl:\n';
-        amcl_params += '  ros__parameters:\n';
-        amcl_params += '    odom_frame_id: odom\n';
-        amcl_params += '    odom_model_type: diff-corrected\n';
-        amcl_params += '    base_frame_id: base_link\n';
-        amcl_params += '    update_min_d: 0.1\n';
-        amcl_params += '    update_min_a: 0.2\n';
-        amcl_params += '    min_particles: 500\n';
-        if (argv.sim_time) {
-            amcl_params += '    use_sim_time: true\n';
-        } else {
-            amcl_params += '    use_sim_time: false\n';
+        if (localization_flags.loc_active == false) {
+            let amcl_params = 'amcl:\n';
+            amcl_params += '  ros__parameters:\n';
+            amcl_params += '    odom_frame_id: odom\n';
+            amcl_params += '    odom_model_type: diff-corrected\n';
+            amcl_params += '    base_frame_id: base_link\n';
+            amcl_params += '    update_min_d: 0.1\n';
+            amcl_params += '    update_min_a: 0.2\n';
+            amcl_params += '    min_particles: 500\n';
+            if (argv.sim_time) {
+                amcl_params += '    use_sim_time: true\n';
+            } else {
+                amcl_params += '    use_sim_time: false\n';
+            }
+            fs.writeFile(configDirectory + '/params.yaml', amcl_params, function (err) {
+                if (err) {
+                    console.log('Could not write amcl configuration file');
+                    return console.log(err);
+                }
+            });
+            localization_process = spawn(amcl_install_path + '/lib/nav2_amcl/amcl', ['__params:=' + configDirectory + '/params.yaml']);
+            changeAMCLStateClient.waitForService(1000).then(result => {
+                if (!result) {
+                    console.log('Error: /amcl/change_state: not available');
+                    return;
+                }
+                setTimeout(transition_configure, 500, changeAMCLStateClient);
+                robot_initial_pose.robot_pos_x = 0;
+                robot_initial_pose.robot_pos_y = 0;
+                robot_initial_pose.robot_pos_theta = 0;
+                setTimeout(setInitialPose, 1500, robot_initial_pose);
+            });
         }
-        fs.writeFile(configDirectory + '/params.yaml', amcl_params, function (err) {
-            if (err) {
-                console.log('Could not write amcl configuration file');
-                return console.log(err);
+        localization_process.stdout.on('data', (data) => { console.log(`[ AMCL ] stdout: ${data}`); });
+        localization_process.stderr.on('data', (data) => { console.error(`[ AMCL ] stderr: ${data}`); });
+        localization_process.on('close', (code) => {
+            localization_flags.loc_active = false;
+            if (localization_flags.map_active == false && localization_flags.loc_active == false) {
+                localization_flags.finalize = false;
             }
         });
-        localization_process = spawn(amcl_install_path + '/lib/nav2_amcl/amcl', ['__params:=' + configDirectory + '/params.yaml']);
-
-        changeMapServerStateClient.waitForService(1000).then(result => {
-            if (!result) {
-                console.log('Error: /map_server/change_state: not available');
-                return;
-            }
-            transition_configure(changeMapServerStateClient);
-        });
-
-        changeAMCLStateClient.waitForService(1000).then(result => {
-            if (!result) {
-                console.log('Error: /amcl/change_state: not available');
-                return;
-            }
-            transition_configure(changeAMCLStateClient);
-            robot_initial_pose.robot_pos_x = 0;
-            robot_initial_pose.robot_pos_y = 0;
-            robot_initial_pose.robot_pos_theta = 0;
-            setTimeout(setInitialPose, 500, robot_initial_pose);
-        });
+        localization_flags.loc_active = true;
     } else {
         console.log('Unsupported map file type');
         return;
     }
-    // localization_process.stdout.on('data', (data) => { console.log(`stdout: ${data}`); });
-    // localization_process.stderr.on('data', (data) => { console.error(`stderr: ${data}`); });
-    localization_process.on('close', (code) => {
-        console.log(`Set localization_flags.active to [false]`);
-        localization_flags.active = false;
-    });
-    console.log(`Set localization_flags.active to [true]`);
-    localization_flags.active = true;
 }
 
 function stopSLAM() {
@@ -472,7 +506,6 @@ function stopSLAM() {
 }
 
 function startSLAM() {
-
     if (fs.existsSync(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml')) {
         fs.readFile(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml', 'utf8', function (err, data) {
             if (err) {
@@ -496,7 +529,7 @@ function startSLAM() {
         console.log("Slam toolbox config file not found, can not start mapping.");
         return
     }
-    slam_process = spawn(slam_toolbox_install_path + '/lib/slam_toolbox/sync_slam_toolbox_node', ['__params:=' + configDirectory + '/params.yaml']);
+    slam_process = spawn(slam_toolbox_install_path + '/lib/slam_toolbox/async_slam_toolbox_node', ['__params:=' + configDirectory + '/params.yaml']);
     // slam_process.stdout.on('data', (data) => {console.log(`stdout: ${data}`);});
     // slam_process.stderr.on('data', (data) => {console.error(`stderr: ${data}`);});
     slam_process.on('close', (code) => {
@@ -565,8 +598,8 @@ function save_map_settings(settings) {
     }
     selected_map_file.name = settings.map_file_name;
     selected_map_file.extension = settings.map_file_extension;
-    map_autosave = settings.map_autosave;
-    save_config();
+    autosave_enabled = settings.autosave_enabled;
+    save_config(true);
 }
 
 function update_map_filenames() {
@@ -640,7 +673,11 @@ function drive_to_target(navID) {
     action_goal._refObject.pose.header.frame_id.data = "map";
     action_goal._refObject.pose.header.frame_id.size = 4;
     action_goal._refObject.pose.header.frame_id.capacity = 4;
-    action_goal._refObject.pose.header.stamp.sec = Date.now() / 1000;
+    if (argv.sim_time == true) {
+        action_goal._refObject.pose.header.stamp.sec = clock_message.clock.sec;
+    } else {
+
+    }
     action_goal._refObject.pose.pose.position.x = target.x;
     action_goal._refObject.pose.pose.position.y = target.y;
     action_goal._refObject.pose.pose.orientation.x = target_quaternion.x;
@@ -661,7 +698,7 @@ io.on('connection', function (socket) {
     socket.on('delete_target', function (target_id) {
         targets.remove_target(target_id);
         emit_target_delete(target_id);
-        save_config();
+        save_config(false);
     });
 
     socket.on('new_target', function (new_target) {
@@ -669,7 +706,7 @@ io.on('connection', function (socket) {
         let target = new NavTargets.Target(targets.get_next_id(), new_target.x, new_target.y, new_target.theta, new_target.label);
         targets.add_target(target);
         emit_target(target);
-        save_config();
+        save_config(false);
     });
 
     socket.on('drive_to_target', function (targetID) {
@@ -755,6 +792,16 @@ http.listen(8000, function () {
 rclnodejs.init().then(() => {
     rosNode = rclnodejs.createNode('rap_server_node');
     robot_pose_emit_timestamp = Date.now();
+
+    if (argv.sim_time == true) {
+        rosNode.createSubscription('rosgraph_msgs/msg/Clock', '/clock',
+            (data) => {
+                clock_message = data;
+            }, {
+            queueSize: 1,
+            throttleMs: 0
+        });
+    }
 
     initialpose_publisher = rosNode.createPublisher('geometry_msgs/msg/PoseWithCovarianceStamped', '/initialpose');
     rosNode.createSubscription('tf2_msgs/msg/TFMessage', '/tf',
@@ -870,5 +917,5 @@ rclnodejs.init().then(() => {
         console.log(err);
     });
 
-load_config();
+load_config(false);
 subprocess_interval = setInterval(subprocessControl, 1000);
