@@ -529,9 +529,9 @@ function startSLAM() {
         console.log("Slam toolbox config file not found, can not start mapping.");
         return
     }
-    slam_process = spawn(slam_toolbox_install_path + '/lib/slam_toolbox/async_slam_toolbox_node', ['__params:=' + configDirectory + '/params.yaml']);
-    // slam_process.stdout.on('data', (data) => {console.log(`stdout: ${data}`);});
-    // slam_process.stderr.on('data', (data) => {console.error(`stderr: ${data}`);});
+    slam_process = spawn(slam_toolbox_install_path + '/lib/slam_toolbox/sync_slam_toolbox_node', ['__params:=' + configDirectory + '/params.yaml']);
+    slam_process.stdout.on('data', (data) => {console.log(`stdout: ${data}`);});
+    slam_process.stderr.on('data', (data) => {console.error(`stderr: ${data}`);});
     slam_process.on('close', (code) => {
         console.log(`child process exited with code ${code}`);
         slam_process_exited = true;

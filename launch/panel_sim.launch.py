@@ -17,8 +17,8 @@ def generate_launch_description():
     rap_server = launch_ros.actions.Node(
         package='route_admin_panel',
         node_executable='node_server.sh',
-        output='log',
-        arguments=['-s', 'true', '--min', '100', '--max', '500']
+        output='screen',
+        arguments=['-s', 'true', '--min', '10', '--max', '250']
     )
 
     map_to_img = launch_ros.actions.Node(
