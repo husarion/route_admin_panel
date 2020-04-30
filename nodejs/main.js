@@ -9,7 +9,7 @@ var quaternionToEuler = require('quaternion-to-euler');
 var math3d = require('math3d');
 const fs = require('fs');
 const yargs = require('yargs');
-const uuidv1 = require('uuid/v1');
+const { v1: uuidv1 } = require('uuid');
 var path = require('path');
 
 const NavTargets = require('./nav_targets.js');
