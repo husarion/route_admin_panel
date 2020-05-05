@@ -16,7 +16,8 @@ def generate_launch_description():
     rap_server = launch_ros.actions.Node(
         package='route_admin_panel',
         node_executable='node_server.sh',
-        output='log'
+        output='screen',
+        arguments=['-s', 'false', '--min', '50', '--max', '500']
     )
 
     map_to_img = launch_ros.actions.Node(
@@ -31,6 +32,10 @@ def generate_launch_description():
             os.path.join(rosbot_description, 'launch', 'rosbot_pro.launch.py'))
     )
 
+    rosbot_nav = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            os.path.join(rosbot_description, 'launch', 'rosbot_navigation.launch.py'))
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -39,7 +44,8 @@ def generate_launch_description():
         ),
         rap_server,
         map_to_img,
-        rosbot
+        rosbot,
+        rosbot_nav,
     ])
 
 if __name__ == '__main__':

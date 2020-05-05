@@ -179,7 +179,7 @@ function saveMapSettings() {
         map_slam: mapModeRadioSLAM.checked,
         map_file_name: mapFileDropdown.options[mapFileDropdown.selectedIndex].text,
         map_file_extension: mapFileDropdown.value,
-        map_autosave: mapAutoSaveCheckbox.checked
+        autosaveEnable: mapAutoSaveCheckbox.checked
     };
     console.log(mapFileDropdown);
     console.log(map_settings);

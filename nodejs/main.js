@@ -374,6 +374,11 @@ function stopLocalization() {
 
 function startLocalization() {
     if (selected_map_file.extension == '.posegraph') {
+        if (localization_flags.loc_active == true) {
+            return;
+        }
+        // Start process
+        console.log("Start process localization_slam_toolbox_node");
         if (fs.existsSync(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml')) {
             fs.readFile(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml', 'utf8', function (err, data) {
                 if (err) {
@@ -406,6 +411,7 @@ function startLocalization() {
         // localization_process.stdout.on('data', (data) => { console.log(`stdout: ${data}`); });
         // localization_process.stderr.on('data', (data) => { console.error(`stderr: ${data}`); });
         localization_process.on('close', (code) => {
+            console.log("Slam_toolbox localization finished");
             localization_flags.loc_active = false;
             localization_flags.finalize = false;
         });
@@ -598,7 +604,7 @@ function save_map_settings(settings) {
     }
     selected_map_file.name = settings.map_file_name;
     selected_map_file.extension = settings.map_file_extension;
-    autosave_enabled = settings.autosave_enabled;
+    autosave_enabled = settings.autosaveEnable;
     save_config(true);
 }
 
