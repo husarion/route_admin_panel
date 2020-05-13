@@ -539,7 +539,7 @@ function startSLAM() {
     slam_process.stdout.on('data', (data) => {console.log(`stdout: ${data}`);});
     slam_process.stderr.on('data', (data) => {console.error(`stderr: ${data}`);});
     slam_process.on('close', (code) => {
-        console.log(`child process exited with code ${code}`);
+        console.log(`sync_slam_toolbox_node exited with code ${code}`);
         slam_process_exited = true;
     });
     console.log("Slam toolbox launched");
