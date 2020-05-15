@@ -46,8 +46,6 @@ Install dependencies:
 cd ~/ros_workspace/src/route_admin_panel/nodejs
 npm install rosnodejs express socket.io quaternion-to-euler math3d multer yargs
 npm install
-mkdir user_maps
-echo '{"targetList": {"targets": []}}' > user_maps/config.json
 ```
 
 Build workspace:
