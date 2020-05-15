@@ -6,7 +6,7 @@
 
     <include file="$(find route_admin_panel)/launch/panel.launch"></include>
 
-    <include file="$(find rplidar_ros)/launch/rplidar.launch"></include>
+    <include file="$(find rplidar_ros)/launch/rplidar_a3.launch"></include>
 
     <!-- LEDS -->
     <!-- <node if="$(arg ws2812b_leds)" pkg="rosbot_ekf" type="move_base_ws2812b_example" name="move_base_ws2812b_example" /> -->
