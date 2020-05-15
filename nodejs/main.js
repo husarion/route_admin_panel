@@ -177,44 +177,35 @@ function save_config(force_restart) {
     console.log("Save config:");
     console.log(confObject);
     let jsonString = JSON.stringify(confObject);
-    fs.writeFile(configFileName, jsonString, 'utf8', function (err) {
-        if (err) {
-            console.log(err);
-        }
-    });
+    fs.writeFileSync(configFileName, jsonString, 'utf8');
     load_config(force_restart);
 }
 
 function load_config(force_restart) {
     if (fs.existsSync(configFileName)) {
-        fs.readFile(configFileName, 'utf8', function (err, data) {
-            if (err) {
-                console.log(err);
-            } else {
-                let confObject = JSON.parse(data);
-                targets.targets = confObject.targetList.targets;
-                if (confObject.mapMode == 'SLAM') {
-                    selected_map_mode = confObject.mapMode;
-                    slam_process_flag = true;
-                    localization_flags.enable = false;
-                    autosave_enabled = confObject.autosaveEnable;
-                } else if (confObject.mapMode == "STATIC") {
-                    selected_map_mode = confObject.mapMode;
-                    slam_process_flag = false;
-                    autosave_enabled = false;
-                    selected_map_file.name = confObject.customMapFileName;
-                    selected_map_file.extension = confObject.customMapFileExt;
-                    if (force_restart) {
-                        localization_flags.restart = true;
-                    }
-                    localization_flags.enable = true;
-                } else {
-                    slam_process_flag = false;
-                    autosave_enabled = false;
-                    localization_flags.enable = false;
-                }
+        let data = fs.readFileSync(configFileName, 'utf8')
+        let confObject = JSON.parse(data);
+        targets.targets = confObject.targetList.targets;
+        if (confObject.mapMode == 'SLAM') {
+            selected_map_mode = confObject.mapMode;
+            slam_process_flag = true;
+            localization_flags.enable = false;
+            autosave_enabled = confObject.autosaveEnable;
+        } else if (confObject.mapMode == "STATIC") {
+            selected_map_mode = confObject.mapMode;
+            slam_process_flag = false;
+            autosave_enabled = false;
+            selected_map_file.name = confObject.customMapFileName;
+            selected_map_file.extension = confObject.customMapFileExt;
+            if (force_restart) {
+                localization_flags.restart = true;
             }
-        });
+            localization_flags.enable = true;
+        } else {
+            slam_process_flag = false;
+            autosave_enabled = false;
+            localization_flags.enable = false;
+        }
     } else {
         console.log("Config file does not exist, create default.");
         if (!fs.existsSync(configDirectory)) {
@@ -266,6 +257,9 @@ function setInitialPose(initial_pose) {
         if (argv.sim_time == true) {
             initial_pose_msg.header.stamp.sec = clock_message.clock.sec - 1;
             initial_pose_msg.header.stamp.nanosec = clock_message.clock.nanosec;
+        } else {
+            initial_pose_msg.header.stamp.sec = Date.now() / 1000;
+            initial_pose_msg.header.stamp.nanosec = 0;
         }
         initial_pose_msg.pose.pose.position.x = initial_pose.robot_pos_x;
         initial_pose_msg.pose.pose.position.y = initial_pose.robot_pos_y;
@@ -474,7 +468,7 @@ function startLocalization() {
                 }
             });
             localization_process = spawn(amcl_install_path + '/lib/nav2_amcl/amcl', ['__params:=' + configDirectory + '/params.yaml']);
-            changeAMCLStateClient.waitForService(1000).then(result => {
+            changeAMCLStateClient.waitForService(5000).then(result => {
                 if (!result) {
                     console.log('Error: /amcl/change_state: not available');
                     return;
@@ -513,31 +507,21 @@ function stopSLAM() {
 
 function startSLAM() {
     if (fs.existsSync(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml')) {
-        fs.readFile(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml', 'utf8', function (err, data) {
-            if (err) {
-                console.log(err);
-            } else {
-                if (argv.sim_time) {
-                    data += '    use_sim_time: true\n';
-                } else {
-                    data += '    use_sim_time: false\n';
-                }
-                data += '    mode: mapping\n';
-                fs.writeFile(configDirectory + '/params.yaml', data, function (err) {
-                    if (err) {
-                        console.log('Could not write slam toolbox configuration file')
-                        return console.log(err);
-                    }
-                });
-            }
-        });
+        let data = fs.readFileSync(rap_install_path + '/share/route_admin_panel/config/slam_toolbox.yaml', 'utf8');
+        if (argv.sim_time) {
+            data += '    use_sim_time: true\n';
+        } else {
+            data += '    use_sim_time: false\n';
+        }
+        data += '    mode: mapping\n';
+        fs.writeFileSync(configDirectory + '/params.yaml', data);
     } else {
         console.log("Slam toolbox config file not found, can not start mapping.");
         return
     }
     slam_process = spawn(slam_toolbox_install_path + '/lib/slam_toolbox/sync_slam_toolbox_node', ['__params:=' + configDirectory + '/params.yaml']);
-    slam_process.stdout.on('data', (data) => {console.log(`stdout: ${data}`);});
-    slam_process.stderr.on('data', (data) => {console.error(`stderr: ${data}`);});
+    slam_process.stdout.on('data', (data) => { console.log(`stdout: ${data}`); });
+    slam_process.stderr.on('data', (data) => { console.error(`stderr: ${data}`); });
     slam_process.on('close', (code) => {
         console.log(`sync_slam_toolbox_node exited with code ${code}`);
         slam_process_exited = true;
