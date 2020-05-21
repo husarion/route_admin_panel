@@ -1,0 +1,13 @@
+<launch>
+
+    <node pkg="route_admin_panel" type="amcl_estimate_node" name="amcl_estimate_node" output="screen">
+        <param name="range_threshold" value="0.1"/>
+        <param name="estimate_minimum_score" value="0.75"/>
+        <param name="nomotion_max_retries" value="25"/>
+        <param name="map_topic" value="/map"/>
+        <param name="scan_topic" value="/scan"/>
+        <param name="global_localization_service" value="/global_localization"/>
+        <param name="nomotion_update_service" value="/request_nomotion_update"/>
+    </node>
+
+</launch>    
