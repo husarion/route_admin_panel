@@ -51,6 +51,7 @@ var map_metadata;
 
 var map_server_process;
 var amcl_process;
+var global_localization_process;
 var gmapping_process;
 var autosave_interval;
 var custom_map_file;
@@ -228,6 +229,14 @@ function stopAMCL() {
         });
         amcl_process.kill();
     }
+    if (global_localization_process) {
+        exec('rosnode kill amcl_estimate_node', (err, stdout, stderr) => {
+            if (err) {
+                console.log("Could not stop AMCL estimate: " + err);
+            }
+        });
+        global_localization_process.kill();
+    }
 }
 
 function startAMCL() {
@@ -240,6 +249,14 @@ function startAMCL() {
         }
     });
     console.log("AMCL launched");
+    global_localization_process = exec('roslaunch route_admin_panel amcl_estimate.launch', (err, stdout, stderr) => {
+        console.log("AMCL estimate finished");
+        if (err) {
+            console.log("Error: " + err);
+            return;
+        }
+    });
+    console.log("AMCL estimate launched");
 }
 
 function stopGmapping() {
