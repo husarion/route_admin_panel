@@ -124,6 +124,8 @@ function load_config() {
                     if (confObject.autosaveEnable == true) {
                         console.log("Start map autosave process");
                         startAutoSave();
+                    } else {
+                        stopAutoSave();
                     }
                 } else if (confObject.mapMode == "STATIC") {
                     stopGmapping();
