@@ -54,6 +54,7 @@ var amcl_process;
 var global_localization_process;
 var gmapping_process;
 var autosave_interval;
+var autosave_interval_time;
 var custom_map_file;
 var selected_map_mode;
 var map_autosave;
@@ -85,12 +86,20 @@ const argv = yargs
         description: 'Maximal map scale',
         type: 'number',
     })
+    .option('map_autosave_interval', {
+        alias: 'autosave',
+        default: 5000,
+        description: 'Interval for map autosaving, [ms]',
+        type: 'number',
+    })
     .help()
     .alias('help', 'h')
     .version(false)
     .argv;
 
 console.log("Map scale: [", argv.map_scale_min, ", ", argv.map_scale_max, "]")
+
+autosave_interval_time = argv.map_autosave_interval;
 
 function save_config() {
     let confObject = {
@@ -291,7 +300,7 @@ function startAutoSave() {
     stopAutoSave();
     let date_string = Date.now().toString();
     console.log("Enable map auto save");
-    autosave_interval = setInterval(saveMap, 1000, 'auto_saved_map_' + date_string);
+    autosave_interval = setInterval(saveMap, autosave_interval_time, 'auto_saved_map_' + date_string);
 }
 
 function saveMap(filename) {
