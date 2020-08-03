@@ -2,10 +2,20 @@
 
     <arg name="admin_panel_map_scale_min" default="10"/>
     <arg name="admin_panel_map_scale_max" default="500"/>
-    <arg name="admin_panel_map_autosave_interval" default="10000"/>
+    <arg name="admin_panel_map_autosave_interval" default="60000"/>
+    <arg name="admin_panel_port" default="8000"/>
     <arg name="node_name" default="node_server"/>
 
-    <node pkg="route_admin_panel" type="node_server.sh" name="$(arg node_name)" output="screen" args="--min $(arg admin_panel_map_scale_min) --max $(arg admin_panel_map_scale_max) --autosave $(arg admin_panel_map_autosave_interval)"/>
+    <node 
+        pkg="route_admin_panel" 
+        type="node_server.sh" 
+        name="$(arg node_name)" 
+        output="screen" 
+        args="
+            --min $(arg admin_panel_map_scale_min) 
+            --max $(arg admin_panel_map_scale_max) 
+            --autosave $(arg admin_panel_map_autosave_interval) 
+            --port $(arg admin_panel_port)"/>
 
     <node pkg="husarion_ros" type="map_to_img_node" name="map_to_img" output="screen">
         <param name="tile_width" value="640"/>

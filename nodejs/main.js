@@ -88,8 +88,13 @@ const argv = yargs
     })
     .option('map_autosave_interval', {
         alias: 'autosave',
-        default: 5000,
+        default: 60000,
         description: 'Interval for map autosaving, [ms]',
+        type: 'number',
+    })
+    .option('port', {
+        default: 8000,
+        description: 'Port for server to listen on',
         type: 'number',
     })
     .help()
@@ -98,6 +103,8 @@ const argv = yargs
     .argv;
 
 console.log("Map scale: [", argv.map_scale_min, ", ", argv.map_scale_max, "]")
+console.log("Port: ", argv.port)
+console.log("Autosave interval time: ", argv.port, "[ms]")
 
 autosave_interval_time = argv.map_autosave_interval;
 
@@ -307,11 +314,13 @@ function saveMap(filename) {
     console.log(`Saving map with name: ${filename}`);
     exec('cd ' + configDirectory + ' && rosrun map_server map_saver -f ' + filename, (err, stdout, stderr) => {
         if (err) {
-            console.log("Error: " + err);
+            console.log("[map_server map_saver] Error: " + err);
             return;
         }
-        console.log("Map saved");
+        console.log("[map_server map_saver] " + stdout);
+        console.log("[map_server map_saver] " + stderr);
         update_map_filenames();
+        console.log("[map_server map_saver] Process finished");
     });
 }
 
@@ -582,8 +591,8 @@ io.on('connection', function (socket) {
 
 load_config();
 
-http.listen(8000, function () {
-    console.log('listening on *:8000');
+http.listen(argv.port, function () {
+    console.log('listening on *:' + argv.port);
 });
 
 rosnodejs.initNode('/rosnodejs')
