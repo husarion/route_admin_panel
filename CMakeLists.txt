@@ -21,7 +21,7 @@ target_link_libraries(amcl_estimate_node
   ${catkin_LIBRARIES}
 )
 
-install(DIRECTORY launch
+install(DIRECTORY launch nodejs
 	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
