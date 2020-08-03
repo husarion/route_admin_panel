@@ -285,18 +285,24 @@ function stopGmapping() {
             }
         });
         gmapping_process.kill();
+        gmapping_process = null;
     }
 }
 
 function startGmapping() {
-    gmapping_process = exec('roslaunch route_admin_panel gmapping.launch', (err, stdout, stderr) => {
-        console.log("Gmapping finished");
-        if (err) {
-            console.log("Error: " + err);
-            return;
-        }
-    });
-    console.log("Gmapping launched");
+    if (gmapping_process) {
+        console.log("Gmapping is already running, no need to launch it again")
+    } else {
+        gmapping_process = exec('roslaunch route_admin_panel gmapping.launch', (err, stdout, stderr) => {
+            console.log("Gmapping finished");
+            if (err) {
+                console.log("Error: " + err);
+                return;
+            }
+            gmapping_process = null;
+        });
+        console.log("Gmapping launched");
+    }
 }
 
 function stopAutoSave() {
