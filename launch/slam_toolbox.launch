@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+
+    <node pkg="slam_toolbox" type="sync_slam_toolbox_node" name="slam_toolbox" output="screen">
+        <rosparam command="load" file="$(find route_admin_panel)/params/slam_toolbox.yaml" />
+    </node>
+
+</launch>

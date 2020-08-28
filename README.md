@@ -20,6 +20,8 @@ curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
+### ROSBot
+
 Create workspace and clone dependency repositories, it may happen that you already have it done, in that case, skip this step:
 
 ```bash
@@ -31,6 +33,18 @@ echo '. ~/ros_workspace/devel/setup.sh' >> ~/.bashrc
 
 git clone https://github.com/husarion/husarion_ros.git
 git clone https://github.com/husarion/rosbot_description.git
+```
+
+### Panther
+
+```bash
+mkdir ~/ros_workspace
+mkdir ~/ros_workspace/src
+cd ~/ros_workspace/src
+catkin_init_workspace 
+echo '. ~/ros_workspace/devel/setup.sh' >> ~/.bashrc
+
+git clone https://github.com/husarion/panther_description.git
 ```
 
 Clone `route_admin_panel` repository:
@@ -77,6 +91,12 @@ Depending on your ROSbot version, you can start it with:
 
     ```bash
     roslaunch route_admin_panel demo_gazebo.launch
+    ```
+
+- for Panther 
+
+    ```bash
+    roslaunch route_admin_panel demo_panther_<type>.launch
     ```
 
 - [deprecated] for ROSbot 2.0 with hFramework:
