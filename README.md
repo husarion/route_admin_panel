@@ -52,7 +52,7 @@ Install nodejs packages:
 cd ~/ros_workspace/install/route_admin_panel/share/route_admin_panel/nodejs
 npm install express socket.io quaternion-to-euler math3d multer yargs uuid
 wget https://forked-rclnodejs.s3-eu-west-1.amazonaws.com/rclnodejs-0.10.3.tgz
-npm install rclnodejs-0.10.3.tgz
+npm install --force rclnodejs-0.10.3.tgz
 npm install
 ```
 
