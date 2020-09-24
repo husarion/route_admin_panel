@@ -1,0 +1,38 @@
+<launch>
+
+    <arg name="admin_panel_map_scale_min" default="10"/>
+    <arg name="admin_panel_map_scale_max" default="500"/>
+    <arg name="admin_panel_map_autosave_interval" default="60000"/>
+    <arg name="admin_panel_port" default="3000"/>
+    <arg name="node_name" default="node_server"/>
+    <arg name="feature_plugin_path" default=""/>
+
+    <node 
+        pkg="route_admin_panel" 
+        type="node_server.sh" 
+        name="$(arg node_name)" 
+        output="screen" 
+        args="
+            --min $(arg admin_panel_map_scale_min) 
+            --max $(arg admin_panel_map_scale_max) 
+            --autosave $(arg admin_panel_map_autosave_interval) 
+            --port $(arg admin_panel_port)
+            --feature_plugin_path $(arg feature_plugin_path)"/>
+
+    <node pkg="husarion_ros" type="map_to_img_node" name="map_to_img" output="screen">
+        <param name="tile_width" value="640"/>
+        <param name="tile_height" value="480"/>
+        <param name="parent_frame" value="/map"/>
+        <param name="child_frame" value="/base_link"/>
+        <param name="draw_robot" value="false"/>
+        <param name="publish_full_map" value="true"/>
+        <param name="publish_map_tile" value="false"/>
+    </node>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="laser_broadcaster" args="0 0 0 0 0 0 base_link laser" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_broadcaster" args="0 0 0 0 0 0 odom base_link" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="odom_broadcaster" args="0 0 0 0 0 0 map odom" />
+
+    <node pkg="map_server" type="map_server" name="test_map_server" args=" $(find route_admin_panel)/test/test_map.yaml" />
+
+</launch>    
