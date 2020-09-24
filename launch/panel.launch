@@ -5,6 +5,7 @@
     <arg name="admin_panel_map_autosave_interval" default="60000"/>
     <arg name="admin_panel_port" default="8000"/>
     <arg name="node_name" default="node_server"/>
+    <arg name="feature_plugin_path" default=""/>
 
     <node 
         pkg="route_admin_panel" 
@@ -15,7 +16,8 @@
             --min $(arg admin_panel_map_scale_min) 
             --max $(arg admin_panel_map_scale_max) 
             --autosave $(arg admin_panel_map_autosave_interval) 
-            --port $(arg admin_panel_port)"/>
+            --port $(arg admin_panel_port)
+            --feature_plugin_path $(arg feature_plugin_path)"/>
 
     <node pkg="husarion_ros" type="map_to_img_node" name="map_to_img" output="screen">
         <param name="tile_width" value="640"/>

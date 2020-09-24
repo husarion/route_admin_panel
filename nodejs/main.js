@@ -2,6 +2,7 @@
 
 var app = require('express')();
 var express = require('express');
+const handlebars = require('express-handlebars');
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
 const rosnodejs = require('rosnodejs');
@@ -98,6 +99,11 @@ const argv = yargs
         description: 'Port for server to listen on',
         type: 'number',
     })
+    .option('feature_plugin_path', {
+        default: null,
+        description: 'Where to search for RAP plugin',
+        type: 'string',
+    })
     .help()
     .alias('help', 'h')
     .version(false)
@@ -105,9 +111,27 @@ const argv = yargs
 
 console.log("Map scale: [", argv.map_scale_min, ", ", argv.map_scale_max, "]")
 console.log("Port: ", argv.port)
-console.log("Autosave interval time: ", argv.port, "[ms]")
+console.log("Autosave interval time: ", argv.map_autosave_interval, "[ms]");
 
 autosave_interval_time = argv.map_autosave_interval;
+
+var use_plugin = false;
+var FeaturePlugin;
+var feature_plugin;
+if (argv.feature_plugin_path) {
+    console.log("argv.feature_plugin_path");
+    console.log(argv.feature_plugin_path);
+try {
+        let plugin_path = require.resolve(argv.feature_plugin_path + '/plugin.js');
+        console.log("Plugin path");
+        console.log(plugin_path);
+        FeaturePlugin = require(plugin_path);
+        feature_plugin = new FeaturePlugin.Plugin();
+        use_plugin = true;
+    } catch (e) {
+        console.log("Feature plugin is not found, not using it");
+    }
+}
 
 function save_config() {
     let confObject = {
@@ -361,13 +385,21 @@ function saveMap(filename) {
     });
 }
 
+app.set('view engine', 'handlebars');
 
-app.get('/', function (req, res) {
-    res.sendFile(__dirname + '/public/index.html');
+app.get('/', (req, res) => {
+    res.render('main', { layout: 'index', addNavbar: use_plugin, addBody: use_plugin, addScript: use_plugin });
 });
 
-app.use(express.static('public'))
+app.engine('handlebars', handlebars({
+    layoutsDir: __dirname + '/views/layouts/',
+    partialsDir: __dirname + argv.feature_plugin_path + '/feature/partials'
+}));
 
+app.use(express.static('public'))
+if (use_plugin) {
+    app.use(express.static(argv.feature_plugin_path + '/feature/public'))
+}
 app.post('/upload', upload.single('map-image'), function (req, res) {
     custom_map_file = './user_maps/' + req.file.originalname + '.yaml';
     let imagePath = req.file.path.replace(/^user_maps\//, '');
@@ -484,11 +516,20 @@ function drive_to_target(navID) {
     return goal_handle._goal.goal_id;
 }
 
+function cancel_all_targets() {
+    console.log("Send cancel all targets to move base action client")
+    moveBase_actionClient.cancelAllGoals();
+}
+
 io.on('connection', function (socket) {
     console.log('a user connected');
     socket.on('disconnect', function () {
         console.log('user disconnected');
     });
+
+    if (use_plugin) {
+        feature_plugin.init_socketIO(socket, io);
+    }
 
     socket.on('map_scale', function (map_scale) {
         zoom_msg.data = map_scale;
@@ -622,6 +663,8 @@ io.on('connection', function (socket) {
 
     socket.on('set_initialpose', setInitialPose);
 
+    socket.on('stop_drive', cancel_all_targets);
+
     emit_map_update();
     update_map_filenames();
 });
@@ -652,6 +695,10 @@ rosnodejs.initNode('/rosnodejs')
             throttleMs: 0
         }
         );
+
+        if (use_plugin) {
+            feature_plugin.init_ros(rosNode, rosnodejs, default_publisher_options);
+        }
 
         let map_metadata_subscriber = rosNode.subscribe('/map_metadata', 'nav_msgs/MapMetaData',
             (data) => {

@@ -42,57 +42,65 @@ var mapModeRadioStatic;
 var mapModeRadioSLAM;
 var mapAutoSaveCheckbox;
 var uploadMapProgressBar;
-var pathCreatorDialog
 var routeManagerDialog;
 var routeStatusLabel;
 var loading_dropdown;
 var unloading_dropdown;
 var currentPath;
 var currentPosesArray;
+var tableCheckbox;
+var labelsCheckbox;
+var zoomCheckbox;
+
+var nav_item_add_target;
+var nav_item_views_dropdown;
+var nav_item_route_status;
+var nav_item_stop_route;
+var nav_item_set_route;
+var nav_item_map_settings;
+var nav_item_save_pos;
+var zoomContainer;
+var konva_container_div;
+var tableContainer;
+var labelsContainer;
 
 function setTargetLabelsCheckboxListener() {
-    let checkbox = document.getElementById('targetLabelsCheckbox');
-    let labelsContainer = document.getElementById('labels-container');
-    checkbox.addEventListener('change', (event) => {
+    labelsCheckbox.addEventListener('change', (event) => {
         if (event.target.checked) {
             labelsContainer.style.display = 'inherit';
         } else {
             labelsContainer.style.display = 'none';
         }
     });
-    checkbox.checked = true;
+    labelsCheckbox.checked = true;
 }
 
 function setTargetsTableCheckboxListener() {
-    let checkbox = document.getElementById('targetsTableCheckbox');
-    let tableContainer = document.getElementById('table-container');
-    checkbox.addEventListener('change', (event) => {
+    tableCheckbox.addEventListener('change', (event) => {
         if (event.target.checked) {
             tableContainer.style.display = 'inherit';
         } else {
             tableContainer.style.display = 'none';
         }
     });
-    checkbox.checked = true;
+    tableCheckbox.checked = true;
 }
 
 function setZoomSliderCheckboxListener() {
-    let checkbox = document.getElementById('zoomCheckbox');
-    let zoomContainer = document.getElementById('zoom-container');
-    checkbox.addEventListener('change', (event) => {
+    zoomCheckbox.addEventListener('change', (event) => {
         if (event.target.checked) {
             zoomContainer.style.display = 'inherit';
         } else {
             zoomContainer.style.display = 'none';
         }
     });
-    checkbox.checked = true;
+    zoomCheckbox.checked = true;
 }
 
 function cancelNewTarget() {
-    document.getElementById('konva-container').removeEventListener('mousedown', initNewTargetArrow);
-    document.getElementById('konva-container').removeEventListener('mousemove', rotateNewTargetArrow);
-    document.getElementById('konva-container').removeEventListener('mousedown', acceptNewTarget);
+    konva_container_div.removeEventListener('mousedown', initNewTargetArrow);
+    konva_container_div.removeEventListener('mousemove', rotateNewTargetArrow);
+    konva_container_div.removeEventListener('mousedown', acceptNewTarget);
     if (newTargetArrow) {
         newTargetArrow.remove();
     }
@@ -103,8 +111,8 @@ function cancelNewTarget() {
 }
 
 function acceptNewTarget(event) {
-    document.getElementById('konva-container').removeEventListener('mousemove', rotateNewTargetArrow);
-    document.getElementById('konva-container').removeEventListener('mousedown', acceptNewTarget);
+    konva_container_div.removeEventListener('mousemove', rotateNewTargetArrow);
+    konva_container_div.removeEventListener('mousedown', acceptNewTarget);
     let arrowTipX = event.clientX - newTargetArrow.attrs.x;
     let arrowTipY = newTargetArrow.attrs.y - event.clientY;
     let arrowAngle = Math.atan2(arrowTipY, arrowTipX);
@@ -137,9 +145,9 @@ function initNewTargetArrow(event) {
         strokeWidth: 3
     });
     newTargetLayer.add(newTargetArrow);
-    document.getElementById('konva-container').removeEventListener('mousedown', initNewTargetArrow);
-    document.getElementById('konva-container').addEventListener('mousemove', rotateNewTargetArrow);
-    document.getElementById('konva-container').addEventListener('mousedown', acceptNewTarget);
+    konva_container_div.removeEventListener('mousedown', initNewTargetArrow);
+    konva_container_div.addEventListener('mousemove', rotateNewTargetArrow);
+    konva_container_div.addEventListener('mousedown', acceptNewTarget);
 }
 
 $(document).keydown(function (e) {
@@ -151,7 +159,6 @@ $(document).keydown(function (e) {
 
 function dismissAllDialogs() {
     dismissCurrentPosDialog();
-    dismissPathCreatorDialog();
     dismissRouteManagerDialog();
     dismissMapSettingsDialog();
     cancelNewTarget();
@@ -163,7 +170,7 @@ function dismissAllDialogs() {
 function addTargetDialog() {
     newTargetLayer = new Konva.Layer();
     stage.add(newTargetLayer);
-    document.getElementById('konva-container').addEventListener('mousedown', initNewTargetArrow);
+    konva_container_div.addEventListener('mousedown', initNewTargetArrow);
 }
 
 function showMapSettingsDialog() {
@@ -250,29 +257,6 @@ function showRouteManagerDialog() {
     routeManagerDialog.style.display = "block";
 }
 
-function showPathCreatorDialog() {
-    dismissAllDialogs();
-    while (loading_dropdown.firstChild) {
-        loading_dropdown.removeChild(loading_dropdown.firstChild);
-    }
-
-    while (unloading_dropdown.firstChild) {
-        unloading_dropdown.removeChild(unloading_dropdown.firstChild);
-    }
-
-    targets_array.forEach(target => {
-        var opt_l = document.createElement('option');
-        var opt_u = document.createElement('option');
-        opt_l.appendChild(document.createTextNode(target.label));
-        opt_u.appendChild(document.createTextNode(target.label));
-        opt_l.value = target.id;
-        opt_u.value = target.id;
-        loading_dropdown.appendChild(opt_l);
-        unloading_dropdown.appendChild(opt_u);
-    });
-    pathCreatorDialog.style.display = "block";
-}
-
 function dismissRouteManagerDialog() {
     routeManagerDialog.style.display = "none";
 }
@@ -280,19 +264,6 @@ function dismissRouteManagerDialog() {
 function dismissMapSettingsDialog() {
     mapSettingsDialog.style.display = "none";
     uploadMapProgressBar.style.display = "none";
-}
-
-function dismissPathCreatorDialog() {
-    pathCreatorDialog.style.display = "none";
-}
-
-function createPath() {
-    let plan_request = {
-        start: loading_dropdown.value,
-        end: unloading_dropdown.value
-    };
-    socket.emit('make_plan', plan_request);
-    dismissPathCreatorDialog();
 }
 
 function uploadCustomMapConfirm() {
@@ -329,14 +300,14 @@ function setRobotPose() {
     dismissAllDialogs();
     newTargetLayer = new Konva.Layer();
     stage.add(newTargetLayer);
-    document.getElementById('konva-container').addEventListener('mousedown', initRobotPoseArrow);
+    konva_container_div.addEventListener('mousedown', initRobotPoseArrow);
 }
 
 
 function cancelRobotPose() {
-    document.getElementById('konva-container').removeEventListener('mousedown', initRobotPoseArrow);
-    document.getElementById('konva-container').removeEventListener('mousemove', rotateRobotPoseArrow);
-    document.getElementById('konva-container').removeEventListener('mousedown', acceptRobotPose);
+    konva_container_div.removeEventListener('mousedown', initRobotPoseArrow);
+    konva_container_div.removeEventListener('mousemove', rotateRobotPoseArrow);
+    konva_container_div.removeEventListener('mousedown', acceptRobotPose);
     if (newTargetArrow) {
         newTargetArrow.remove();
     }
@@ -347,8 +318,8 @@ function cancelRobotPose() {
 }
 
 function acceptRobotPose(event) {
-    document.getElementById('konva-container').removeEventListener('mousemove', rotateRobotPoseArrow);
-    document.getElementById('konva-container').removeEventListener('mousedown', acceptRobotPose);
+    konva_container_div.removeEventListener('mousemove', rotateRobotPoseArrow);
+    konva_container_div.removeEventListener('mousedown', acceptRobotPose);
     let arrowTipX = event.clientX - newTargetArrow.attrs.x;
     let arrowTipY = newTargetArrow.attrs.y - event.clientY;
     let arrowAngle = Math.atan2(arrowTipY, arrowTipX);
@@ -381,9 +352,9 @@ function initRobotPoseArrow(event) {
         strokeWidth: 3
     });
     newTargetLayer.add(newTargetArrow);
-    document.getElementById('konva-container').removeEventListener('mousedown', initRobotPoseArrow);
-    document.getElementById('konva-container').addEventListener('mousemove', rotateRobotPoseArrow);
-    document.getElementById('konva-container').addEventListener('mousedown', acceptRobotPose);
+    konva_container_div.removeEventListener('mousedown', initRobotPoseArrow);
+    konva_container_div.addEventListener('mousemove', rotateRobotPoseArrow);
+    konva_container_div.addEventListener('mousedown', acceptRobotPose);
 }
 
 function updateRobotPose(x, y, theta) {
@@ -443,8 +414,6 @@ window.onclick = function (event) {
     } else if (event.target == mapSettingsDialog) {
         dismissAllDialogs();
     } else if (event.target == routeManagerDialog) {
-        dismissAllDialogs();
-    } else if (event.target == pathCreatorDialog) {
         dismissAllDialogs();
     }
 }
@@ -610,6 +579,10 @@ function deleteTarget(target_id) {
     socket.emit('delete_target', target_id);
 }
 
+function stopDrive() {
+    socket.emit('stop_drive');
+}
+
 function createIcon(fa_icon_name) {
     let customIcon = document.createElement("i");
     customIcon.classList.add("fa");
@@ -751,11 +724,11 @@ function mapResizeCallback(event) {
 window.onload = function () {
     socket = io();
 
-    let stageDiv = document.getElementById('konva-container');
+    konva_container_div = document.getElementById('konva-container');
     stage = new Konva.Stage({
         container: 'konva-container', // id of container <div>
-        width: stageDiv.offsetWidth,
-        height: stageDiv.offsetHeight
+        width: konva_container_div.offsetWidth,
+        height: konva_container_div.offsetHeight
     });
     arrowsLayer = new Konva.Layer();
     mapLayer = new Konva.Layer();
@@ -905,15 +878,31 @@ window.onload = function () {
     mapModeRadioSLAM = document.getElementById("map_mode_slam");
     mapAutoSaveCheckbox = document.getElementById("mapAutoSaveCheckbox");
     routeManagerDialog = document.getElementById("routeManagerDialog");
-    pathCreatorDialog = document.getElementById("pathCreatorDialog");
+    tableCheckbox = document.getElementById('targetsTableCheckbox');
+    labelsCheckbox = document.getElementById('targetLabelsCheckbox');
+    zoomCheckbox = document.getElementById('zoomCheckbox');
 
-    stageDiv.addEventListener("wheel", mapResizeCallback);
+    nav_item_add_target = document.getElementById('add-target');
+    nav_item_views_dropdown = document.getElementById('views-dropdown');
+    nav_item_route_status = document.getElementById('route-status');
+    nav_item_stop_route = document.getElementById('stop-route');
+    nav_item_set_route = document.getElementById('set-route');
+    nav_item_map_settings = document.getElementById('map-settings');
+    nav_item_save_pos = document.getElementById('save-pos');
+    zoomContainer = document.getElementById('zoom-container');
+    tableContainer = document.getElementById('table-container');
+    labelsContainer = document.getElementById('labels-container');
 
-    var hammertime = new Hammer(stageDiv);
+    konva_container_div.addEventListener("wheel", mapResizeCallback);
+
+    var hammertime = new Hammer(konva_container_div);
     hammertime.get('pinch').set({ enable: true });
     hammertime.on('pinch', mapResizeCallback);
 
     setTargetLabelsCheckboxListener();
     setTargetsTableCheckboxListener();
     setZoomSliderCheckboxListener();
+    if(typeof load_plugin == 'function') { 
+        load_plugin(); 
+    }
 };

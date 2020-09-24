@@ -58,7 +58,7 @@ Install dependencies:
 
 ```bash 
 cd ~/ros_workspace/src/route_admin_panel/nodejs
-npm install rosnodejs express socket.io quaternion-to-euler math3d multer yargs
+npm install rosnodejs express express-handlebars socket.io quaternion-to-euler math3d multer yargs
 npm install
 ```
 
