@@ -384,12 +384,12 @@ app.get('/', (req, res) => {
 
 app.engine('handlebars', handlebars({
     layoutsDir: __dirname + '/views/layouts/',
-    partialsDir: __dirname + argv.feature_plugin_path + '/feature/partials'
+    partialsDir: argv.feature_plugin_path + '/partial'
 }));
 
 app.use(express.static('public'))
 if (use_plugin) {
-    app.use(express.static(argv.feature_plugin_path + '/feature/public'))
+    app.use(express.static(argv.feature_plugin_path + '/public'))
 }
 app.post('/upload', upload.single('map-image'), function (req, res) {
     custom_map_file = './user_maps/' + req.file.originalname + '.yaml';
