@@ -121,7 +121,7 @@ var feature_plugin;
 if (argv.feature_plugin_path) {
     console.log("argv.feature_plugin_path");
     console.log(argv.feature_plugin_path);
-try {
+    try {
         let plugin_path = require.resolve(argv.feature_plugin_path + '/plugin.js');
         console.log("Plugin path");
         console.log(plugin_path);
@@ -141,44 +141,35 @@ function save_config() {
         targetList: targets
     }
     let jsonString = JSON.stringify(confObject);
-    fs.writeFile(configFileName, jsonString, 'utf8', function (err) {
-        if (err) {
-            console.log(err);
-        }
-    });
+    fs.writeFileSync(configFileName, jsonString, 'utf8');
     load_config();
 }
 
 function load_config() {
     if (fs.existsSync(configFileName)) {
-        fs.readFile(configFileName, 'utf8', function (err, data) {
-            if (err) {
-                console.log(err);
+        let data = fs.readFileSync(configFileName, 'utf8')
+        let confObject = JSON.parse(data);
+        targets.targets = confObject.targetList.targets;
+        if (confObject.mapMode == 'SLAM') {
+            stopAMCL();
+            stopMapServer();
+            console.log("Start SLAM process");
+            // startGmapping();
+            startSlamToolbox();
+            if (confObject.autosaveEnable == true) {
+                console.log("Start map autosave process");
+                startAutoSave();
             } else {
-                let confObject = JSON.parse(data);
-                targets.targets = confObject.targetList.targets;
-                if (confObject.mapMode == 'SLAM') {
-                    stopAMCL();
-                    stopMapServer();
-                    console.log("Start SLAM process");
-                    // startGmapping();
-                    startSlamToolbox();
-                    if (confObject.autosaveEnable == true) {
-                        console.log("Start map autosave process");
-                        startAutoSave();
-                    } else {
-                        stopAutoSave();
-                    }
-                } else if (confObject.mapMode == "STATIC") {
-                    // stopGmapping();
-                    stopSlamToolbox();
-                    stopAutoSave();
-                    custom_map_file = confObject.customMapFile;
-                    startMapServer(custom_map_file);
-                    startAMCL();
-                }
+                stopAutoSave();
             }
-        });
+        } else if (confObject.mapMode == "STATIC") {
+            // stopGmapping();
+            stopSlamToolbox();
+            stopAutoSave();
+            custom_map_file = confObject.customMapFile;
+            startMapServer(custom_map_file);
+            startAMCL();
+        }
     } else {
         console.log("Config file does not exist, create default.");
         if (!fs.existsSync(configDirectory)) {
