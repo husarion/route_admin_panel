@@ -58,7 +58,7 @@ Wrong panther_type. Expected values:
 
 print("Configuration ->", "Hostname:", HOSTNAME, "ROS_IP:", ROS_IP,
       "ROS_MASTER_URI:", ROS_MASTER_URI, "PANTHER_TYPE:", PANTHER_TYPE)
-subprocess.call("mkdir /usr/ros", shell=True)
+subprocess.call("mkdir /etc/ros", shell=True)
 
 
 #
