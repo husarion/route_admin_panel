@@ -1,17 +1,11 @@
 <launch>
 
-    <node pkg="tf2_ros" type="static_transform_publisher" name="laser_broadcaster" args="0.285 0 0 0 0 0 base_link laser" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="laser_broadcaster" args="0.185 0 0 3.1415 0 0 base_link laser" />
 
     <include file="$(find route_admin_panel)/launch/panel.launch"></include>
 
-    <!-- <include file="$(find webui-ros-joystick)/launch/webui.launch">
-        <arg name="linear_scale" value="1"/>
-        <arg name="angular_scale" value="1"/>
-        <arg name="wait_nodes" value="panther_description"/>
-        <arg name="node_name" value="joystck_server"/>
-    </include> -->
-
-    <include file="$(find rplidar_ros)/launch/rplidar_s1.launch"></include>
+    <include file="$(find rplidar_ros)/launch/rplidar_a3.launch"></include>
+    <!-- <include file="$(find rplidar_ros)/launch/rplidar_s1.launch"></include> -->
 
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
         <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS"/>
@@ -19,7 +13,6 @@
         <rosparam file="$(find panther_navigation)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
         <rosparam file="$(find panther_navigation)/config/local_costmap_params.yaml" command="load" />
         <rosparam file="$(find panther_navigation)/config/global_costmap_params.yaml" command="load" />
-        <rosparam file="$(find panther_navigation)/config/trajectory_planner_mix.yaml" command="load" />
         <rosparam file="$(find panther_navigation)/config/teb_planner_classic.yaml" command="load" />
 
         <remap from="cmd_vel" to="cmd_vel"/>

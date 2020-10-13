@@ -4,11 +4,7 @@ import sys
 import subprocess
 import os
 
-
-print(str(sys.argv[0]),str(sys.argv[1]))
-exit()
-
-possible_arg_count = [1, 2, 5]
+possible_arg_count = [2, 5]
 if (len(sys.argv) not in possible_arg_count) or len(sys.argv)==1:
     sys.exit("""
     ###Mismatch argument count. Expected 4.###
@@ -18,7 +14,7 @@ USAGE:
     sudo python3 set_panther_upstart.py <username> <local_ip_addr> <ros_master_ip/ros_master_hostname> <panther_type>
     
 Example for default panther configuration: 
-    sudo python3 set_panther_upstart.py husarion 192.168.1.3 192.168.1.3 classic
+    sudo python3 set_panther_upstart.py husarion 10.15.20.3 10.15.20.3 classic
 
 Uninstall: 
     sudo python3 set_panther_upstart.py uninstall
