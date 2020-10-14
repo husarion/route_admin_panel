@@ -5,7 +5,7 @@ import subprocess
 import os
 
 possible_arg_count = [2, 5]
-if (len(sys.argv) not in possible_arg_count) or len(sys.argv)==1:
+if (len(sys.argv) not in possible_arg_count) or len(sys.argv) == 1:
     sys.exit("""
     ###Mismatch argument count. Expected 4.###
 
@@ -34,12 +34,13 @@ if prompt_sudo() != 0:
 
 if str(sys.argv[1]) == "uninstall":
     subprocess.call("rm /usr/sbin/route_admin_panel.sh", shell=True)
+    # subprocess.call("rm /usr/sbin/roscore_script.sh", shell=True)
     subprocess.call("rm /etc/ros/env.sh", shell=True)
     subprocess.call("rm /etc/systemd/system/roscore.service", shell=True)
     subprocess.call(
         "rm /etc/systemd/system/route_admin_panel.service", shell=True)
     subprocess.call("systemctl disable roscore.service", shell=True)
-    subprocess.call("systemctl disable panther_rap.service", shell=True)
+    subprocess.call("systemctl disable route_admin_panel.service", shell=True)
     sys.exit("All removed")
 
 
@@ -77,11 +78,11 @@ subprocess.Popen(['echo "{}" > /etc/ros/env.sh'.format(env_msg)],  shell=True)
 # /etc/systemd/system/roscore.service
 #
 
-startup = "/bin/bash -c '. /opt/ros/noetic/setup.sh; . /etc/ros/env.sh; roscore & while ! echo exit | nc {rmu} 11311 > /dev/null; do sleep 1; done'".format(
+startup = "/bin/bash -c '. /opt/ros/noetic/setup.sh; . /etc/ros/env.sh; while ! ping -c 1 -n -w 1 {rmu} &> /dev/null;do  sleep 1;done;roscore & while ! echo exit | nc {rmu} 11311 > /dev/null; do sleep 1; done'".format(
     rmu=ROS_MASTER_URI)
 
 roscore_service = """[Unit]
-After=NetworkManager.service time-sync.target
+After=NetworkManager.service time-sync.target network-online.target
 [Service]
 Type=forking
 User=husarion
@@ -113,7 +114,7 @@ subprocess.Popen(
 
 
 #
-# panther_rap service
+# route_admin_panel service
 #
 
 rap_service = """[Unit]
@@ -135,6 +136,7 @@ subprocess.Popen(
 subprocess.call("systemctl enable roscore.service", shell=True)
 subprocess.call("systemctl enable route_admin_panel.service", shell=True)
 subprocess.call("chmod +x /usr/sbin/route_admin_panel.sh", shell=True)
+# subprocess.call("chmod +x /usr/sbin/roscore_script.sh", shell=True)
 
 
 print("Done!")
