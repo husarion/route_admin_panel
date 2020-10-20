@@ -5,8 +5,7 @@ import subprocess
 import os
 
 
-print(str(sys.argv[0]),str(sys.argv[1]))
-exit()
+sys.exit("when using on branch plugin_dev use this file from plugin")
 
 possible_arg_count = [1, 2, 5]
 if (len(sys.argv) not in possible_arg_count) or len(sys.argv)==1:
