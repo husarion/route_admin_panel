@@ -34,7 +34,6 @@ if prompt_sudo() != 0:
 
 if str(sys.argv[1]) == "uninstall":
     subprocess.call("rm /usr/sbin/route_admin_panel.sh", shell=True)
-    # subprocess.call("rm /usr/sbin/roscore_script.sh", shell=True)
     subprocess.call("rm /etc/ros/env.sh", shell=True)
     subprocess.call("rm /etc/systemd/system/roscore.service", shell=True)
     subprocess.call(
@@ -78,18 +77,21 @@ subprocess.Popen(['echo "{}" > /etc/ros/env.sh'.format(env_msg)],  shell=True)
 # /etc/systemd/system/roscore.service
 #
 
-startup = "/bin/bash -c '. /opt/ros/noetic/setup.sh; . /etc/ros/env.sh; while ! ping -c 1 -n -w 1 {rmu} &> /dev/null;do  sleep 1;done;roscore & while ! echo exit | nc {rmu} 11311 > /dev/null; do sleep 1; done'".format(
+startup = "/bin/bash -c '. /opt/ros/noetic/setup.sh; . /etc/ros/env.sh; roscore & while ! echo exit | nc {rmu} 11311 > /dev/null; do sleep 2; done'".format(
     rmu=ROS_MASTER_URI)
 
 roscore_service = """[Unit]
-After=NetworkManager.service time-sync.target network-online.target
+After=NetworkManager.service time-sync.target
 [Service]
+TimeoutStartSec=120
+Restart=always
+RestartSec=10
 Type=forking
-User=husarion
-ExecStart={}
+User={hn}
+ExecStart={ex}
 [Install]
 WantedBy=multi-user.target
-""".format(startup)
+""".format(hn=HOSTNAME,ex=startup)
 
 subprocess.call("touch /etc/systemd/system/roscore.service", shell=True)
 subprocess.Popen(
@@ -118,10 +120,10 @@ subprocess.Popen(
 #
 
 rap_service = """[Unit]
-Requires=roscore.service
-PartOf=roscore.service
 After=NetworkManager.service time-sync.target roscore.service
 [Service]
+Restart=always
+RestartSec=10
 Type=simple
 User={hn}
 ExecStart=/usr/sbin/route_admin_panel.sh
@@ -136,7 +138,6 @@ subprocess.Popen(
 subprocess.call("systemctl enable roscore.service", shell=True)
 subprocess.call("systemctl enable route_admin_panel.service", shell=True)
 subprocess.call("chmod +x /usr/sbin/route_admin_panel.sh", shell=True)
-# subprocess.call("chmod +x /usr/sbin/roscore_script.sh", shell=True)
 
 
 print("Done!")
