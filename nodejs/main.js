@@ -46,7 +46,7 @@ try {
     rap_install_path = execSync('ros2 pkg prefix route_admin_panel').toString();
     rap_install_path = rap_install_path.substring(0, rap_install_path.length - 1);
 } catch (error) {
-    console.error(`Can not get slam_toolbox path. Is it installed?`);
+    console.error(`Can not get route_admin_panel path. Is it installed?`);
     console.error(`${error}`);
     return
 }
@@ -520,8 +520,8 @@ function startSLAM() {
         return
     }
     slam_process = spawn(slam_toolbox_install_path + '/lib/slam_toolbox/sync_slam_toolbox_node', ['__params:=' + configDirectory + '/params.yaml']);
-    slam_process.stdout.on('data', (data) => { console.log(`stdout: ${data}`); });
-    slam_process.stderr.on('data', (data) => { console.error(`stderr: ${data}`); });
+    slam_process.stdout.on('data', (data) => { console.log(`[slam_toolbox] stdout: ${data}`); });
+    slam_process.stderr.on('data', (data) => { console.error(`[slam_toolbox] stderr: ${data}`); });
     slam_process.on('close', (code) => {
         console.log(`sync_slam_toolbox_node exited with code ${code}`);
         slam_process_exited = true;
