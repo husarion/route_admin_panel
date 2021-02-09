@@ -58,6 +58,7 @@ var autosave_interval_time;
 var custom_map_file;
 var selected_map_mode;
 var map_autosave;
+var valid_map_received;
 var configDirectory = './user_maps';
 var configFileName = './user_maps/config.json';
 
@@ -172,6 +173,7 @@ const default_publisher_options = {
 
 function emit_map_update() {
     if (map_metadata) {
+        valid_map_received = true;
         let map_update = {
             blob: map_data_blob,
             metadata: map_metadata
@@ -313,21 +315,26 @@ function startAutoSave() {
     stopAutoSave();
     let date_string = Date.now().toString();
     console.log("Enable map auto save");
+    valid_map_received = false;
     autosave_interval = setInterval(saveMap, autosave_interval_time, 'auto_saved_map_' + date_string);
 }
 
 function saveMap(filename) {
-    console.log(`Saving map with name: ${filename}`);
-    exec('cd ' + configDirectory + ' && rosrun map_server map_saver -f ' + filename, (err, stdout, stderr) => {
-        if (err) {
-            console.log("[map_server map_saver] Error: " + err);
-            return;
-        }
-        console.log("[map_server map_saver] " + stdout);
-        console.log("[map_server map_saver] " + stderr);
-        update_map_filenames();
-        console.log("[map_server map_saver] Process finished");
-    });
+    if (valid_map_received) {
+        console.log(`Saving map with name: ${filename}`);
+        exec('cd ' + configDirectory + ' && rosrun map_server map_saver -f ' + filename, (err, stdout, stderr) => {
+            if (err) {
+                console.log("[map_server map_saver] Error: " + err);
+                return;
+            }
+            console.log("[map_server map_saver] " + stdout);
+            console.log("[map_server map_saver] " + stderr);
+            update_map_filenames();
+            console.log("[map_server map_saver] Process finished");
+        });
+    } else {
+        console.warn("Can not call map autosave. Valid map was not created");
+    }
 }
 
 
