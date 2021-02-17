@@ -53,6 +53,7 @@ var map_server_process;
 var amcl_process;
 var global_localization_process;
 var gmapping_process;
+var slam_toolbox_process;
 var autosave_interval;
 var autosave_interval_time;
 var custom_map_file;
@@ -137,7 +138,8 @@ function load_config() {
                     stopAMCL();
                     stopMapServer();
                     console.log("Start SLAM process");
-                    startGmapping();
+                    // startGmapping();
+                    startSlamToolbox();
                     if (confObject.autosaveEnable == true) {
                         console.log("Start map autosave process");
                         startAutoSave();
@@ -145,7 +147,8 @@ function load_config() {
                         stopAutoSave();
                     }
                 } else if (confObject.mapMode == "STATIC") {
-                    stopGmapping();
+                    // stopGmapping();
+                    stopSlamToolbox();
                     stopAutoSave();
                     custom_map_file = confObject.customMapFile;
                     startMapServer(custom_map_file);
@@ -291,6 +294,18 @@ function stopGmapping() {
     }
 }
 
+function stopSlamToolbox() {
+    if (slam_toolbox_process) {
+        exec('rosnode kill slam_toolbox_node', (err, stdout, stderr) => {
+            if (err) {
+                console.log("Could not stop slam_toolbox: " + err);
+            }
+        });
+        slam_toolbox_process.kill();
+        slam_toolbox_process = null;
+    }
+}
+
 function startGmapping() {
     if (gmapping_process) {
         console.log("Gmapping is already running, no need to launch it again")
@@ -304,6 +319,22 @@ function startGmapping() {
             gmapping_process = null;
         });
         console.log("Gmapping launched");
+    }
+}
+
+function startSlamToolbox() {
+    if (slam_toolbox_process) {
+        console.log("Slam_toolbox is already running, no need to launch it again")
+    } else {
+        slam_toolbox_process = exec('roslaunch route_admin_panel slam_toolbox.launch', (err, stdout, stderr) => {
+            console.log("Slam_toolbox finished");
+            if (err) {
+                console.log("Error: " + err);
+                return;
+            }
+            slam_toolbox_process = null;
+        });
+        console.log("Slam_toolbox launched");
     }
 }
 
