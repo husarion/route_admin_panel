@@ -77,7 +77,7 @@ subprocess.Popen(['echo "{}" > /etc/ros/env.sh'.format(env_msg)],  shell=True)
 # /etc/systemd/system/roscore.service
 #
 
-startup = "/bin/bash -c '. /opt/ros/noetic/setup.sh; . /etc/ros/env.sh; roscore & while ! echo exit | nc {rmu} 11311 > /dev/null; do sleep 1; done'".format(
+startup = "/bin/bash -c '. /opt/ros/noetic/setup.sh; . /etc/ros/env.sh; while ! ping -c 1 -n -w 1 10.15.20.1 &> /dev/null; do sleep 1; done ;roscore & while ! echo exit | nc {rmu} 11311 > /dev/null; do sleep 1; done'".format(
     rmu=ROS_MASTER_URI)
 
 roscore_service = """[Unit]
