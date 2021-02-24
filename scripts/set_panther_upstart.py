@@ -3,22 +3,31 @@
 import sys
 import subprocess
 import os
+import argparse
 
-possible_arg_count = [2, 5]
-if (len(sys.argv) not in possible_arg_count) or len(sys.argv) == 1:
-    sys.exit("""
-    ###Mismatch argument count. Expected 4.###
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument('-u', '--uninstall', dest='argument_uninstall', type=bool,
+                    help="If uninstall", required=False, default=False)
+parser.add_argument('-rc', '--roscore', dest='argument_roscore', type=bool,
+                    help="Whether to install roscore autostart on host machine", default=False)
+parser.add_argument('-hm', '--hostname', dest='argument_hostname', type=str,
+                    help="Hostname", default="husarion")
+parser.add_argument('-ri', '--rosip', dest='argument_rosip', type=str,
+                    help="Local ip address", default="10.15.20.3")
+parser.add_argument('-rmu', '--rosmasteruri', dest='argument_rosmasteruri', type=str,
+                    help="Local ip address", default="10.15.20.2")
+parser.add_argument('-p', '--panthertype', dest='argument_panthertype', type=str,
+                    help="Local ip address", default="classic")
+parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                    help='Show this help message and exit. Example usage: sudo python3 set_panther_upstart.py -rc False -hm husarion -ri 10.15.20.3 -rmu 10.15.20.2 -p classic')
 
-This script set up autostart of roscore and route_admin_panel 
-USAGE: 
-    sudo python3 set_panther_upstart.py <username> <local_ip_addr> <ros_master_ip/ros_master_hostname> <panther_type>
-    
-Example for default panther configuration: 
-    sudo python3 set_panther_upstart.py husarion 10.15.20.3 10.15.20.3 classic
-
-Uninstall: 
-    sudo python3 set_panther_upstart.py uninstall
-""")
+args = parser.parse_args()
+UNISTALL = args.argument_uninstall
+ROSCORE = args.argument_roscore
+HOSTNAME = args.argument_hostname
+ROS_IP = args.argument_rosip
+ROS_MASTER_URI = args.argument_rosmasteruri
+PANTHER_TYPE = args.argument_panthertype
 
 
 def prompt_sudo():
@@ -32,7 +41,7 @@ def prompt_sudo():
 if prompt_sudo() != 0:
     sys.exit("The user wasn't authenticated as a sudoer, exiting")
 
-if str(sys.argv[1]) == "uninstall":
+if UNISTALL:
     subprocess.call("rm /usr/sbin/route_admin_panel.sh", shell=True)
     subprocess.call("rm /etc/ros/env.sh", shell=True)
     subprocess.call("rm /etc/systemd/system/roscore.service", shell=True)
@@ -42,11 +51,6 @@ if str(sys.argv[1]) == "uninstall":
     subprocess.call("systemctl disable route_admin_panel.service", shell=True)
     sys.exit("All removed")
 
-
-HOSTNAME = str(sys.argv[1])
-ROS_IP = str(sys.argv[2])
-ROS_MASTER_URI = str(sys.argv[3])
-PANTHER_TYPE = str(sys.argv[4])
 
 panther_types = ["mix", "classic", "mecanum"]
 if PANTHER_TYPE not in panther_types:
@@ -72,30 +76,30 @@ export ROS_MASTER_URI=http://{rmu}:11311
 
 subprocess.Popen(['echo "{}" > /etc/ros/env.sh'.format(env_msg)],  shell=True)
 
+if ROSCORE:
+    #
+    # /etc/systemd/system/roscore.service
+    #
 
-#
-# /etc/systemd/system/roscore.service
-#
+    startup = "/bin/bash -c '. /opt/ros/noetic/setup.sh; . /etc/ros/env.sh; while ! ping -c 1 -n -w 1 10.15.20.1 &> /dev/null; do sleep 1; done ;roscore & while ! echo exit | nc {rmu} 11311 > /dev/null; do sleep 1; done'".format(
+        rmu=ROS_MASTER_URI)
 
-startup = "/bin/bash -c '. /opt/ros/noetic/setup.sh; . /etc/ros/env.sh; while ! ping -c 1 -n -w 1 10.15.20.1 &> /dev/null; do sleep 1; done ;roscore & while ! echo exit | nc {rmu} 11311 > /dev/null; do sleep 1; done'".format(
-    rmu=ROS_MASTER_URI)
+    roscore_service = """[Unit]
+    After=NetworkManager.service time-sync.target
+    [Service]
+    TimeoutStartSec=60
+    Restart=always
+    RestartSec=0.5
+    Type=forking
+    User={hn}
+    ExecStart={ex}
+    [Install]
+    WantedBy=multi-user.target
+    """.format(hn=HOSTNAME, ex=startup)
 
-roscore_service = """[Unit]
-After=NetworkManager.service time-sync.target
-[Service]
-TimeoutStartSec=60
-Restart=always
-RestartSec=0.5
-Type=forking
-User={hn}
-ExecStart={ex}
-[Install]
-WantedBy=multi-user.target
-""".format(hn=HOSTNAME,ex=startup)
-
-subprocess.call("touch /etc/systemd/system/roscore.service", shell=True)
-subprocess.Popen(
-    ['echo "{}" > /etc/systemd/system/roscore.service'.format(roscore_service)],  shell=True)
+    subprocess.call("touch /etc/systemd/system/roscore.service", shell=True)
+    subprocess.Popen(
+        ['echo "{}" > /etc/systemd/system/roscore.service'.format(roscore_service)],  shell=True)
 
 
 #
@@ -106,6 +110,10 @@ rap_script = """#!/bin/bash
 source ~/husarion_ws/devel/setup.bash
 source /etc/ros/env.sh
 export ROS_HOME=$(echo ~{hn})/.ros
+until rostopic list
+do
+  sleep 1
+done
 roslaunch route_admin_panel demo_panther_{pt}.launch &
 PID=$!
 wait "$PID"
@@ -120,7 +128,7 @@ subprocess.Popen(
 #
 
 rap_service = """[Unit]
-After=NetworkManager.service time-sync.target roscore.service
+After=NetworkManager.service time-sync.target
 [Service]
 Restart=always
 RestartSec=10
@@ -134,8 +142,8 @@ WantedBy=multi-user.target
 subprocess.Popen(
     ['echo "{}" > /etc/systemd/system/route_admin_panel.service'.format(rap_service)],  shell=True)
 
-
-subprocess.call("systemctl enable roscore.service", shell=True)
+if ROSCORE:
+    subprocess.call("systemctl enable roscore.service", shell=True)
 subprocess.call("systemctl enable route_admin_panel.service", shell=True)
 subprocess.call("chmod +x /usr/sbin/route_admin_panel.sh", shell=True)
 
