@@ -6,9 +6,9 @@ import os
 import argparse
 
 parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('-u', '--uninstall', dest='argument_uninstall', type=bool,
-                    help="If uninstall", required=False, default=False)
-parser.add_argument('-rc', '--roscore', dest='argument_roscore', type=bool,
+parser.add_argument('-u', '--uninstall', dest='argument_uninstall', 
+                    help="If uninstall default: sudo ./set_panther_upstart.py -u", required=False, action='store_true', default=False)
+parser.add_argument('-rc', '--roscore', dest='argument_roscore', action='store_true',
                     help="Whether to install roscore autostart on host machine", default=False)
 parser.add_argument('-hm', '--hostname', dest='argument_hostname', type=str,
                     help="Hostname", default="husarion")
@@ -19,17 +19,17 @@ parser.add_argument('-rmu', '--rosmasteruri', dest='argument_rosmasteruri', type
 parser.add_argument('-p', '--panthertype', dest='argument_panthertype', type=str,
                     help="Local ip address", default="classic")
 parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
-                    help='Show this help message and exit. Example usage: sudo python3 set_panther_upstart.py -rc False -hm husarion -ri 10.15.20.3 -rmu 10.15.20.2 -p classic')
+                    help='Show this help message and exit. Example usage: sudo python3 set_panther_upstart.py -hm husarion -ri 10.15.20.3 -rmu 10.15.20.2 -p classic')
 
 args = parser.parse_args()
-UNISTALL = args.argument_uninstall
+UNINSTALL = args.argument_uninstall
 ROSCORE = args.argument_roscore
 HOSTNAME = args.argument_hostname
 ROS_IP = args.argument_rosip
 ROS_MASTER_URI = args.argument_rosmasteruri
 PANTHER_TYPE = args.argument_panthertype
 
-
+print(UNINSTALL)
 def prompt_sudo():
     ret = 0
     if os.geteuid() != 0:
@@ -41,7 +41,7 @@ def prompt_sudo():
 if prompt_sudo() != 0:
     sys.exit("The user wasn't authenticated as a sudoer, exiting")
 
-if UNISTALL:
+if UNINSTALL == True:
     subprocess.call("rm /usr/sbin/route_admin_panel.sh", shell=True)
     subprocess.call("rm /etc/ros/env.sh", shell=True)
     subprocess.call("rm /etc/systemd/system/roscore.service", shell=True)
@@ -76,7 +76,7 @@ export ROS_MASTER_URI=http://{rmu}:11311
 
 subprocess.Popen(['echo "{}" > /etc/ros/env.sh'.format(env_msg)],  shell=True)
 
-if ROSCORE:
+if ROSCORE == True:
     #
     # /etc/systemd/system/roscore.service
     #
@@ -142,7 +142,7 @@ WantedBy=multi-user.target
 subprocess.Popen(
     ['echo "{}" > /etc/systemd/system/route_admin_panel.service'.format(rap_service)],  shell=True)
 
-if ROSCORE:
+if ROSCORE == True:
     subprocess.call("systemctl enable roscore.service", shell=True)
 subprocess.call("systemctl enable route_admin_panel.service", shell=True)
 subprocess.call("chmod +x /usr/sbin/route_admin_panel.sh", shell=True)
