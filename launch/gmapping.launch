@@ -9,9 +9,9 @@
         <param name="xmax" value="5"/>
         <param name="ymax" value="5"/>
         <param name="maxUrange" value="25"/>
-        <param name="map_update_interval" value="1"/>
-        <param name="linearUpdate" value="0.1"/>
-        <param name="angularUpdate" value="0.1"/>
+        <param name="map_update_interval" value="2"/>
+        <param name="linearUpdate" value="0.05"/>
+        <param name="angularUpdate" value="0.05"/>
         <param name="temporalUpdate" value="-1"/>
         <param name="particles" value="100"/>
     </node>
